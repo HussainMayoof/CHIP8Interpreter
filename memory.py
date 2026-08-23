@@ -1,8 +1,11 @@
 class Memory:
+    FONT_START = 0x50
+
     def __init__(self) -> None:
         self.memory = bytearray(4096)
 
-        self.memory[0x50:0xa0] = [
+        # fmt: off
+        self.memory[self.FONT_START: self.FONT_START + 80] = [
             0x60, 0x90, 0x90, 0x90, 0x60, #0
             0x60, 0x20, 0x20, 0x20, 0x70, #1
             0x70, 0x10, 0x70, 0x40, 0x70, #2
@@ -20,6 +23,7 @@ class Memory:
             0x70, 0x50, 0x70, 0x50, 0x70, #E
             0x70, 0x40, 0x70, 0x40, 0x40  #F
         ]
+        # fmt: on
 
     def read(self, address: int) -> int:
         return self.memory[address]

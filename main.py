@@ -10,18 +10,36 @@ from emulator import Emulator
 WIDTH, HEIGHT, SCALE = 64, 32, 10
 CPU_HZ, TIMER_HZ = 700, 60
 
+
 def main() -> None:
     sdl.SDL_Init(sdl.SDL_INIT_VIDEO)
-    window = sdl.SDL_CreateWindow(b"CHIP-8 Interpreter",WIDTH * SCALE, HEIGHT * SCALE, 0)
-    renderer = sdl.SDL_CreateRenderer(window, None)
+    window = sdl.SDL_CreateWindow(
+        ctypes.c_char_p(b"CHIP-8 Interpreter"),
+        ctypes.c_int(WIDTH * SCALE),
+        ctypes.c_int(HEIGHT * SCALE),
+        0,
+    )
+    renderer = sdl.SDL_CreateRenderer(window, ctypes.c_char_p(None))
 
     emulator = Emulator()
     emulator.load_rom(sys.argv[1])
 
     def draw(screen: np.ndarray) -> None:
-        sdl.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
+        sdl.SDL_SetRenderDrawColor(
+            renderer,
+            ctypes.c_ubyte(0),
+            ctypes.c_ubyte(0),
+            ctypes.c_ubyte(0),
+            ctypes.c_ubyte(255),
+        )
         sdl.SDL_RenderClear(renderer)
-        sdl.SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255)
+        sdl.SDL_SetRenderDrawColor(
+            renderer,
+            ctypes.c_ubyte(255),
+            ctypes.c_ubyte(255),
+            ctypes.c_ubyte(255),
+            ctypes.c_ubyte(255),
+        )
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -30,7 +48,6 @@ def main() -> None:
                     sdl.SDL_RenderFillRect(renderer, ctypes.byref(rect))
 
         sdl.SDL_RenderPresent(renderer)
-
 
     last_timer_tick = time.time()
     cpu_interval = 1 / CPU_HZ
@@ -59,6 +76,7 @@ def main() -> None:
     sdl.SDL_DestroyRenderer(renderer)
     sdl.SDL_DestroyWindow(window)
     sdl.SDL_Quit()
+
 
 if __name__ == "__main__":
     main()
