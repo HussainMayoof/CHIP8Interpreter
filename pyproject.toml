@@ -1,0 +1,14 @@
+[project]
+name = "chip8interpreter"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5.2",
+    "pysdl3>=0.9.11b1",
+]
+
+[dependency-groups]
+dev = [
+    "pylint>=4.0.7",
+    "ruff>=0.16.4",
+]
