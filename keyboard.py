@@ -4,32 +4,32 @@
 # 7 8 9 E              A S D F
 # A 0 B F              Z X C V
 
-import sdl3 as sdl
+import pygame
 
 
 class Keyboard:
     def __init__(self) -> None:
-        self.layout = [  # scancodes for keys representing values from 0 to f
-            27,
-            30,
-            31,
-            32,
-            20,
-            26,
-            8,
-            4,
-            22,
-            7,
-            29,
-            6,
-            33,
-            21,
-            9,
-            25,
+        self.layout = [
+            pygame.K_x,
+            pygame.K_1,
+            pygame.K_2,
+            pygame.K_3,
+            pygame.K_q,
+            pygame.K_w,
+            pygame.K_e,
+            pygame.K_a,
+            pygame.K_s,
+            pygame.K_d,
+            pygame.K_z,
+            pygame.K_c,
+            pygame.K_4,
+            pygame.K_r,
+            pygame.K_f,
+            pygame.K_v,
         ]
 
     def get_current(self) -> list[int]:
-        keys = sdl.SDL_GetKeyboardState(None)
+        keys = pygame.key.get_pressed()
         keys_pressed = []
         for i, key in enumerate(self.layout):
             if bool(keys[key]):
@@ -37,5 +37,5 @@ class Keyboard:
         return keys_pressed
 
     def is_pressed(self, key: int) -> bool:
-        keys = sdl.SDL_GetKeyboardState(None)
+        keys = pygame.key.get_pressed()
         return bool(keys[self.layout[key]])

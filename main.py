@@ -1,63 +1,47 @@
-import ctypes
 import sys
 import time
+import tkinter.filedialog
 
 import numpy as np
-import sdl3 as sdl
+import pygame
 
 from emulator import Emulator
 
-WIDTH, HEIGHT, SCALE = 64, 32, 10
+WIDTH, HEIGHT, SCALE = 64, 32, 20
 CPU_HZ, TIMER_HZ = 700, 60
+
+ON_COLOR = (255, 255, 255)
+OFF_COLOR = (0, 0, 0)
 
 
 def main() -> None:
-    sdl.SDL_Init(sdl.SDL_INIT_VIDEO)
-    window = sdl.SDL_CreateWindow(
-        ctypes.c_char_p(b"CHIP-8 Interpreter"),
-        ctypes.c_int(WIDTH * SCALE),
-        ctypes.c_int(HEIGHT * SCALE),
-        0,
-    )
-    renderer = sdl.SDL_CreateRenderer(window, ctypes.c_char_p(None))
+    pygame.init()
+
+    screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
+    pygame.display.set_caption("CHIP-8 Interpreter")
+    clock = pygame.time.Clock()
 
     emulator = Emulator()
-    emulator.load_rom(sys.argv[1])
 
-    def draw(screen: np.ndarray) -> None:
-        sdl.SDL_SetRenderDrawColor(
-            renderer,
-            ctypes.c_ubyte(0),
-            ctypes.c_ubyte(0),
-            ctypes.c_ubyte(0),
-            ctypes.c_ubyte(255),
-        )
-        sdl.SDL_RenderClear(renderer)
-        sdl.SDL_SetRenderDrawColor(
-            renderer,
-            ctypes.c_ubyte(255),
-            ctypes.c_ubyte(255),
-            ctypes.c_ubyte(255),
-            ctypes.c_ubyte(255),
-        )
+    if len(sys.argv) > 1:
+        emulator.load_rom(sys.argv[1])
+    else:
+        emulator.load_rom(tkinter.filedialog.askopenfilename())
 
-        for x in range(WIDTH):
-            for y in range(HEIGHT):
-                if screen[x][y]:
-                    rect = sdl.SDL_FRect(x * SCALE, y * SCALE, SCALE, SCALE)
-                    sdl.SDL_RenderFillRect(renderer, ctypes.byref(rect))
-
-        sdl.SDL_RenderPresent(renderer)
+    def draw(display: np.ndarray) -> None:
+        rgb = np.where(display[..., None], ON_COLOR, OFF_COLOR)
+        surface = pygame.surfarray.make_surface(rgb)
+        surface = pygame.transform.scale(surface, (WIDTH * SCALE, HEIGHT * SCALE))
+        screen.blit(surface, (0, 0))
+        pygame.display.flip()
 
     last_timer_tick = time.time()
-    cpu_interval = 1 / CPU_HZ
     timer_interval = 1 / TIMER_HZ
     running = True
-    event = sdl.SDL_Event()
 
     while running:
-        while sdl.SDL_PollEvent(ctypes.byref(event)):
-            if event.type == sdl.SDL_EVENT_QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 running = False
         emulator.execute()
         draw(emulator.display.screen)
@@ -71,11 +55,7 @@ def main() -> None:
         if emulator.st.is_playing():
             print("Beep")
 
-        time.sleep(cpu_interval)
-
-    sdl.SDL_DestroyRenderer(renderer)
-    sdl.SDL_DestroyWindow(window)
-    sdl.SDL_Quit()
+        clock.tick(CPU_HZ)
 
 
 if __name__ == "__main__":
