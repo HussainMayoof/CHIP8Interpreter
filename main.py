@@ -1,5 +1,4 @@
 import sys
-import time
 import tkinter.filedialog
 
 import numpy as np
@@ -24,7 +23,11 @@ def main() -> None:
     pygame.display.set_caption("CHIP-8 Interpreter")
     clock = pygame.time.Clock()
 
-    freq = pygame.mixer.get_init()[0]
+    mixer_info = pygame.mixer.get_init()
+    if mixer_info is None:
+        raise RuntimeError("Failed to initialize pygame mixer")
+
+    freq = mixer_info[0]
     period = freq // BEEP_FREQUENCY
     wave = np.array(
         [BEEP_AMPLITUDE] * (period // 2) + [-BEEP_AMPLITUDE] * (period // 2),
@@ -46,32 +49,30 @@ def main() -> None:
         screen.blit(surface, (0, 0))
         pygame.display.flip()
 
-    last_timer_tick = time.time()
-    timer_interval = 1 / TIMER_HZ
+    last_timer_tick = 0
+    timer_interval = 1000 / TIMER_HZ
     running = True
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
         emulator.execute()
         draw(emulator.display.screen)
 
-        now = time.time()
-        if now - last_timer_tick >= timer_interval:
+        elapsed = clock.tick(CPU_HZ)
+        last_timer_tick += elapsed
+        if last_timer_tick >= timer_interval:
             emulator.dt.decrement()
             emulator.st.decrement()
-            last_timer_tick = now
+            last_timer_tick -= timer_interval
 
         if emulator.st.is_playing():
             if not pygame.mixer.get_busy():
                 beep.play(loops=-1)
-            print("Beep")
         else:
             beep.stop()
-
-        clock.tick(CPU_HZ)
-
 
 if __name__ == "__main__":
     main()
