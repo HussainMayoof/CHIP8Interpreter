@@ -13,13 +13,24 @@ CPU_HZ, TIMER_HZ = 700, 60
 ON_COLOR = (255, 255, 255)
 OFF_COLOR = (0, 0, 0)
 
+BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
+
 
 def main() -> None:
+    pygame.mixer.pre_init(channels=1, allowedchanges=0)
     pygame.init()
 
     screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
     pygame.display.set_caption("CHIP-8 Interpreter")
     clock = pygame.time.Clock()
+
+    freq = pygame.mixer.get_init()[0]
+    period = freq // BEEP_FREQUENCY
+    wave = np.array(
+        [BEEP_AMPLITUDE] * (period // 2) + [-BEEP_AMPLITUDE] * (period // 2),
+        dtype=np.int16,
+    )
+    beep = pygame.sndarray.make_sound(wave)
 
     emulator = Emulator()
 
@@ -53,7 +64,11 @@ def main() -> None:
             last_timer_tick = now
 
         if emulator.st.is_playing():
+            if not pygame.mixer.get_busy():
+                beep.play(loops=-1)
             print("Beep")
+        else:
+            beep.stop()
 
         clock.tick(CPU_HZ)
 

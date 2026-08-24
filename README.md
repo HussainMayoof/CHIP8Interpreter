@@ -38,7 +38,6 @@ I would like to thank the authors of the following materials for their invaluabl
 
 ## To Do
 
-- [ ] Add sounds
 - [ ] Add GUI
 - [ ] Add debugging
 - [ ] Add SUPER-CHIP support
