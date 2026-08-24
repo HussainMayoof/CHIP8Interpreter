@@ -24,6 +24,7 @@ I have included a variety of CHIP-8 ROMs in the `roms` directory taken from the 
 
 1. Run `uv sync` to install dependencies
 2. Run `uv run main.py "path-to-rom"` to start the emulator, or just run `uv run main.py` and select your ROM from the dialog
+3. (WIP) you can also access the GUI using `run gui.py`
 
 ---
 
@@ -38,7 +39,7 @@ I would like to thank the authors of the following materials for their invaluabl
 
 ## To Do
 
-- [ ] Add GUI
+- [ ] Fully implement GUI
 - [ ] Add debugging
 - [ ] Add SUPER-CHIP support
 - [ ] Add XO-CHIP support

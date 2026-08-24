@@ -1,5 +1,6 @@
 import sys
 import tkinter.filedialog
+from pathlib import Path
 
 import numpy as np
 import pygame
@@ -15,12 +16,16 @@ OFF_COLOR = (0, 0, 0)
 BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
 
 
-def main() -> None:
+def main(file_name: str) -> None:
+    emulator = Emulator()
+
+    emulator.load_rom(file_name)
+
     pygame.mixer.pre_init(channels=1, allowedchanges=0)
     pygame.init()
 
     screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
-    pygame.display.set_caption("CHIP-8 Interpreter")
+    pygame.display.set_caption(Path(file_name).stem)
     clock = pygame.time.Clock()
 
     mixer_info = pygame.mixer.get_init()
@@ -35,13 +40,6 @@ def main() -> None:
     )
     beep = pygame.sndarray.make_sound(wave)
 
-    emulator = Emulator()
-
-    if len(sys.argv) > 1:
-        emulator.load_rom(sys.argv[1])
-    else:
-        emulator.load_rom(tkinter.filedialog.askopenfilename())
-
     def draw(display: np.ndarray) -> None:
         rgb = np.where(display[..., None], ON_COLOR, OFF_COLOR)
         surface = pygame.surfarray.make_surface(rgb)
@@ -54,10 +52,6 @@ def main() -> None:
     running = True
 
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
         emulator.execute()
         draw(emulator.display.screen)
 
@@ -74,5 +68,15 @@ def main() -> None:
         else:
             beep.stop()
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        file = sys.argv[1]
+    else:
+        file = tkinter.filedialog.askopenfilename()
+    main(file)
