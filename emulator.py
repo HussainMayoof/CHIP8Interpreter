@@ -179,7 +179,7 @@ class Emulator:
                         y_val = self.get_register(y)
                         value = x_val - y_val
                         self.set_register(x, value)
-                        if x_val > y_val:
+                        if x_val >= y_val:
                             self.set_register(0xF, 1)
                         else:
                             self.set_register(0xF, 0)
@@ -189,7 +189,7 @@ class Emulator:
                         y_val = self.get_register(y)
                         value = y_val - x_val
                         self.set_register(x, value)
-                        if x_val < y_val:
+                        if x_val <= y_val:
                             self.set_register(0xF, 1)
                         else:
                             self.set_register(0xF, 0)
