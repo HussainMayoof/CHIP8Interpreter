@@ -155,16 +155,19 @@ class Emulator:
                         self.set_register(
                             x, self.get_register(x) | self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x2:  # and (8XY2)
                         self.set_register(
                             x, self.get_register(x) & self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x3:  # xor (8XY3)
                         self.set_register(
                             x, self.get_register(x) ^ self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x4:  # add (8XY4)
                         value = self.get_register(x) + self.get_register(y)

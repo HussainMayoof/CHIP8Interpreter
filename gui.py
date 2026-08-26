@@ -14,7 +14,12 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QPushButton,
     QTreeWidget,
-    QTreeWidgetItem, QHeaderView, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QFrame,
+    QTreeWidgetItem,
+    QHeaderView,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QStyle,
+    QFrame,
 )
 
 from main import main
@@ -24,6 +29,7 @@ def resource_path(relative_path):
     base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
+
 # Disable focus to remove outline from tree widget
 class NoFocusDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -31,6 +37,7 @@ class NoFocusDelegate(QStyledItemDelegate):
         if option.state & QStyle.StateFlag.State_HasFocus:
             option.state &= ~QStyle.StateFlag.State_HasFocus
         super().paint(painter, option, index)
+
 
 # Individual item in the ROM list
 class GameItem(QTreeWidgetItem):
