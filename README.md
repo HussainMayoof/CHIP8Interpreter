@@ -1,12 +1,13 @@
-# CHIP-8 Interpreter
+# HelloCHIP
 
-This is my first emulator-adjacent project.
+A simple CHIP-8 interpreter/emulator written in Python, intended to be an emulation "Hello World" project.
 
 ---
 
 ## Features
 
 - Fully designed font created by me
+- All original instructions supported
 - Currently only supports original CHIP-8 games
 - Partial functionality
 

@@ -33,7 +33,7 @@ class EmulatorWindow(QMainWindow):
 
         # Window settings, title, icon and size
         self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
-        self.setWindowTitle("CHIP-8 Interpreter")
+        self.setWindowTitle("HelloCHIP")
         self.setWindowIcon(QtGui.QIcon('./assets/c8.png'))
         size = self.settings.value("size", QSize(640, 320)) # Default window size is 640 x 320
         self.resize(size)
