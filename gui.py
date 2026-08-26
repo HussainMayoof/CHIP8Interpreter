@@ -47,6 +47,7 @@ class GameItem(QTreeWidgetItem):
         self.file = file
 
     def run_game(self):
+        self.setSelected(False)
         main(str(self.file))
 
 
