@@ -68,4 +68,5 @@ jobs:
                 uses: softprops/action-gh-release@v3
                 with:
                     files: release/*
+                    name: "${{ github.ref_name }} - HelloCHIP"
                     generate_release_notes: true
