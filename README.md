@@ -19,13 +19,31 @@ I have included a variety of CHIP-8 ROMs in the `roms` directory taken from the 
 
 ## Usage
 
+### Ready Build
+
+You can extract the `.zip` file included in the `Releases` section and run the `exe` file to start the app (only available on Windows).
+
+### Run from the Terminal
+
 > **Prerequisites**
 > 
 > - [uv]([https://www.python.org/downloads/](https://docs.astral.sh/uv/getting-started/installation/))
 
 1. Run `uv sync` to install dependencies
 2. Run `uv run main.py "path-to-rom"` to start the emulator, or just run `uv run main.py` and select your ROM from the dialogue
-3. (WIP) you can also access the GUI using `run gui.py`
+3. You can also access the GUI using `run gui.py`
+
+### Build from Source
+
+> **Prerequisites**
+> 
+> - [uv]([https://www.python.org/downloads/](https://docs.astral.sh/uv/getting-started/installation/))
+
+_I have not tested this on any platform other than Windows 11_
+
+1. Run `uv sync` to install dependencies
+2. Run `uv run pyinstaller gui.spec`
+3. The executable file can be found in the `./dist/HelloCHIP` directory
 
 ---
 
@@ -40,7 +58,7 @@ I would like to thank the authors of the following materials for their invaluabl
 
 ## To Do
 
-- [ ] Fully implement GUI
+- [ ] Add settings to GUI
 - [ ] Add debugging
 - [ ] Add SUPER-CHIP support
 - [ ] Add XO-CHIP support
