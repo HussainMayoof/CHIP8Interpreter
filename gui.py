@@ -1,3 +1,5 @@
+import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +18,11 @@ from PyQt6.QtWidgets import (
 )
 
 from main import main
+
+
+def resource_path(relative_path):
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 # Disable focus to remove outline from tree widget
 class NoFocusDelegate(QStyledItemDelegate):
@@ -110,7 +117,7 @@ class EmulatorWindow(QMainWindow):
         # Window settings, title, icon and size
         self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
         self.setWindowTitle("HelloCHIP")
-        self.setWindowIcon(QtGui.QIcon("./assets/c8.png"))
+        self.setWindowIcon(QtGui.QIcon(resource_path("./assets/c8.png")))
         size = self.settings.value(
             "size", QSize(640, 320)
         )  # Default window size is 640 x 320
