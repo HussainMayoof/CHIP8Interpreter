@@ -208,6 +208,8 @@ class EmulatorWindow(QMainWindow):
                 for file in rom_dir.rglob("*.ch8"):
                     # Add each game to the game list
                     GameItem(file, game_list)
+
+                game_list.sortItems(0, Qt.SortOrder.AscendingOrder)
             else:
                 self.settings.remove("romDir")
                 self.get_roms()
