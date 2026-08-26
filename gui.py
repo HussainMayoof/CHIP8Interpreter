@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from PyQt6 import QtGui
@@ -9,32 +10,82 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QFileDialog,
     QGridLayout,
-    QPushButton, QListWidget, QListWidgetItem,
+    QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem, QHeaderView, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QFrame,
 )
 
 from main import main
 
+# Disable focus to remove outline from tree widget
+class NoFocusDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        option = QStyleOptionViewItem(option)
+        if option.state & QStyle.StateFlag.State_HasFocus:
+            option.state &= ~QStyle.StateFlag.State_HasFocus
+        super().paint(painter, option, index)
+
 # Individual item in the ROM list
-class GameItem(QListWidgetItem):
-    def __init__(self, file: Path, parent: QListWidget) -> None:
-        super().__init__(file.stem, parent)
+class GameItem(QTreeWidgetItem):
+    def __init__(self, file: Path, parent: QTreeWidget) -> None:
+        super().__init__(
+            parent,
+            [
+                file.stem,
+                f"{(file.stat().st_size / 1024):.1f} KB",
+                datetime.fromtimestamp(file.stat().st_mtime).strftime("%d/%m/%Y"),
+            ],
+        )
 
         self.file = file
 
     def run_game(self):
         main(str(self.file))
 
+
 # ROM list
-class GameList(QListWidget):
+class GameList(QTreeWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.setColumnCount(3)
+        self.setHeaderLabels(["Game Name", "File Size", "Modified"])
+        self.setRootIsDecorated(False)
+        self.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
+        self.setSortingEnabled(True)
+
+        self.setColumnWidth(0, 300)
+        self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        self.header().setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+
+        self.setStyleSheet("""
+            QTreeWidget::item {
+                padding: 6px;
+            }
+            QTreeWidget::item:selected {
+                background-color: #3d7eff;
+                color: white;
+                outline: none;
+                border: none;
+            }
+            QTreeWidget::item:focus {
+                outline: none;
+                border: none;
+            }
+            QHeaderView::section {
+                padding: 4px;
+                font-weight: bold;
+            }
+        """)
+
+        self.setItemDelegate(NoFocusDelegate(self))
+        self.setFrameShape(QFrame.Shape.NoFrame)
 
         self.itemActivated.connect(self.activate_item)
 
     @staticmethod
-    def activate_item(item: QListWidgetItem) -> None:
+    def activate_item(item: QTreeWidgetItem) -> None:
         if isinstance(item, GameItem):
             item.run_game()
 
@@ -51,6 +102,7 @@ class GameList(QListWidget):
         else:
             super().mousePressEvent(event)
 
+
 class EmulatorWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -58,25 +110,21 @@ class EmulatorWindow(QMainWindow):
         # Window settings, title, icon and size
         self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
         self.setWindowTitle("HelloCHIP")
-        self.setWindowIcon(QtGui.QIcon('./assets/c8.png'))
-        size = self.settings.value("size", QSize(640, 320)) # Default window size is 640 x 320
+        self.setWindowIcon(QtGui.QIcon("./assets/c8.png"))
+        size = self.settings.value(
+            "size", QSize(640, 320)
+        )  # Default window size is 640 x 320
         self.resize(size)
-
-        # Window styles
-        self.setStyleSheet(
-            "padding: 4px;"
-        )
 
         # GUI layout
         self.layout = QGridLayout()
+        self.layout.setContentsMargins(16, 4, 16, 12)
 
         self.roms_widget = None
 
         # Menu bar
-        menu = self.menuBar()
-        assert menu is not None
-        file_menu = menu.addMenu("&File")
-        assert file_menu is not None
+        self.menuBar().setStyleSheet("QMenuBar { padding-left: 12}")
+        file_menu = self.menuBar().addMenu("&File")
 
         choose_game = QAction("Choose &game...", self)
         choose_game.triggered.connect(self.choose_game)
@@ -96,7 +144,7 @@ class EmulatorWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)
 
     # Save window size when GUI is closed
-    def closeEvent(self, a0: QtGui.QCloseEvent|None) -> None:
+    def closeEvent(self, a0: QtGui.QCloseEvent | None) -> None:
         self.settings.setValue("size", self.size())
 
     # Choose a game from a file
@@ -116,7 +164,9 @@ class EmulatorWindow(QMainWindow):
         # Run game from selected file
         if file_dialog.exec():
             file = file_dialog.selectedFiles()[0]
-            self.settings.setValue("fileSelectDir", Path(file).parent) # Save directory to be used next time
+            self.settings.setValue(
+                "fileSelectDir", Path(file).parent
+            )  # Save directory to be used next time
             main(file)
 
     # Choose a ROM directory
@@ -125,9 +175,7 @@ class EmulatorWindow(QMainWindow):
 
         # File dialogue
         folder_path = QFileDialog.getExistingDirectory(
-            self,
-            "Select a ROM directory",
-            str(default_dir)
+            self, "Select a ROM directory", str(default_dir)
         )
 
         if folder_path and Path(folder_path).is_dir():
@@ -164,9 +212,8 @@ class EmulatorWindow(QMainWindow):
             self.roms_widget = choose_dir_button
 
     def eventFilter(self, obj, event):
-        if (
-                event.type() == QtGui.QMouseEvent.Type.MouseButtonPress
-                and isinstance(self.roms_widget, GameList)
+        if event.type() == QtGui.QMouseEvent.Type.MouseButtonPress and isinstance(
+            self.roms_widget, GameList
         ):
             global_pos = event.globalPosition().toPoint()
             local_pos = self.roms_widget.mapFromGlobal(global_pos)
