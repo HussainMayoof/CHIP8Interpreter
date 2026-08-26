@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PyQt6 import QtGui
-from PyQt6.QtCore import QSettings, QSize
+from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -9,23 +9,47 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QFileDialog,
     QGridLayout,
-    QLabel,
-    QScrollArea,
-    QPushButton,
+    QPushButton, QListWidget, QListWidgetItem,
 )
 
 from main import main
 
-
-class GameLabel(QLabel):
-    def __init__(self, file: Path) -> None:
-        super().__init__()
+# Individual item in the ROM list
+class GameItem(QListWidgetItem):
+    def __init__(self, file: Path, parent: QListWidget) -> None:
+        super().__init__(file.stem, parent)
 
         self.file = file
-        self.setText(Path(file).stem)
 
-    def mousePressEvent(self, ev: QtGui.QMouseEvent|None) -> None:
+    def run_game(self):
         main(str(self.file))
+
+# ROM list
+class GameList(QListWidget):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+
+        self.itemActivated.connect(self.activate_item)
+
+    @staticmethod
+    def activate_item(item: QListWidgetItem) -> None:
+        if isinstance(item, GameItem):
+            item.run_game()
+
+    def mousePressEvent(self, event: QtGui.QMouseEvent | None):
+        # If click was a left click and the item was already selected, start the game
+        if event and event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.pos())
+
+            was_selected = item is not None and item.isSelected()
+            super().mousePressEvent(event)
+
+            if item is not None and was_selected:
+                item.run_game()
+        else:
+            super().mousePressEvent(event)
 
 class EmulatorWindow(QMainWindow):
     def __init__(self) -> None:
@@ -37,6 +61,11 @@ class EmulatorWindow(QMainWindow):
         self.setWindowIcon(QtGui.QIcon('./assets/c8.png'))
         size = self.settings.value("size", QSize(640, 320)) # Default window size is 640 x 320
         self.resize(size)
+
+        # Window styles
+        self.setStyleSheet(
+            "padding: 4px;"
+        )
 
         # GUI layout
         self.layout = QGridLayout()
@@ -63,6 +92,8 @@ class EmulatorWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self.get_roms()
+
+        QApplication.instance().installEventFilter(self)
 
     # Save window size when GUI is closed
     def closeEvent(self, a0: QtGui.QCloseEvent|None) -> None:
@@ -114,27 +145,34 @@ class EmulatorWindow(QMainWindow):
         if rom_path:
             rom_dir = Path(rom_path)
             if rom_dir.is_dir():
-                # Scroll area
-                scroll_area = QScrollArea()
-                scroll_area.setWidgetResizable(True)
-                self.layout.addWidget(scroll_area)
-                self.roms_widget = scroll_area
-
-                scroll_content = QWidget()
-                scroll_layout = QGridLayout(scroll_content)
-                scroll_area.setWidget(scroll_content)
+                # Create game list
+                game_list = GameList()
+                self.layout.addWidget(game_list)
+                self.roms_widget = game_list
 
                 for file in rom_dir.rglob("*.ch8"):
-                    rom_widget = GameLabel(file)
-                    scroll_layout.addWidget(rom_widget)
+                    # Add each game to the game list
+                    GameItem(file, game_list)
             else:
                 self.settings.remove("romDir")
                 self.get_roms()
         else:
-            choose_dir_button = QPushButton("Choose a rom directory")
+            # Create a button to choose a directory for ROMs
+            choose_dir_button = QPushButton("Choose a ROM directory")
             choose_dir_button.clicked.connect(self.choose_dir)
             self.layout.addWidget(choose_dir_button)
             self.roms_widget = choose_dir_button
+
+    def eventFilter(self, obj, event):
+        if (
+                event.type() == QtGui.QMouseEvent.Type.MouseButtonPress
+                and isinstance(self.roms_widget, GameList)
+        ):
+            global_pos = event.globalPosition().toPoint()
+            local_pos = self.roms_widget.mapFromGlobal(global_pos)
+            if not self.roms_widget.rect().contains(local_pos):
+                self.roms_widget.clearSelection()
+        return super().eventFilter(obj, event)
 
 
 def gui() -> None:
