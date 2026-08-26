@@ -23,7 +23,7 @@ I have included a variety of CHIP-8 ROMs in the `roms` directory taken from the 
 > - [uv]([https://www.python.org/downloads/](https://docs.astral.sh/uv/getting-started/installation/))
 
 1. Run `uv sync` to install dependencies
-2. Run `uv run main.py "path-to-rom"` to start the emulator, or just run `uv run main.py` and select your ROM from the dialog
+2. Run `uv run main.py "path-to-rom"` to start the emulator, or just run `uv run main.py` and select your ROM from the dialogue
 3. (WIP) you can also access the GUI using `run gui.py`
 
 ---
@@ -33,7 +33,7 @@ I have included a variety of CHIP-8 ROMs in the `roms` directory taken from the 
 I would like to thank the authors of the following materials for their invaluable contribution to this project
 
 - [Guide to making a CHIP-8 emulator](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#keypad) by Tobias Langhoff
-- 
+- [PyQt6 Tutorial](https://www.pythonguis.com/pyqt6-tutorial/) by Martin Fitzpatrick
 
 ---
 

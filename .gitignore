@@ -1,6 +1,7 @@
-#Libraries
+# Libraries and cache
 .venv/
-
-.idea/
-
 __pycache__/
+
+# Settings
+.idea/
+config.ini

@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QLabel,
     QScrollArea,
-    QVBoxLayout,
+    QPushButton,
 )
 
 from main import main
@@ -32,23 +32,16 @@ class EmulatorWindow(QMainWindow):
         super().__init__()
 
         # Window settings, title, icon and size
-        self.settings = QSettings("HussainMayoof", "CHIP-8 Interpreter")
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
         self.setWindowTitle("CHIP-8 Interpreter")
         self.setWindowIcon(QtGui.QIcon('./assets/c8.png'))
         size = self.settings.value("size", QSize(640, 320)) # Default window size is 640 x 320
         self.resize(size)
 
         # GUI layout
-        layout = QGridLayout()
+        self.layout = QGridLayout()
 
-        # Scroll area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        layout.addWidget(scroll_area)
-
-        scroll_content = QWidget()
-        self.scroll_layout = QVBoxLayout(scroll_content)
-        scroll_area.setWidget(scroll_content)
+        self.roms_widget = None
 
         # Menu bar
         menu = self.menuBar()
@@ -64,14 +57,9 @@ class EmulatorWindow(QMainWindow):
         choose_rom_dir.triggered.connect(self.choose_dir)
         file_menu.addAction(choose_rom_dir)
 
-        # Button to start the game
-        # button = QPushButton("Choose &game")
-        # button.clicked.connect(self.choose_game)
-        # self.layout.addWidget(button, 2, 4)
-
         # Container widget
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(self.layout)
         self.setCentralWidget(container)
 
         self.get_roms()
@@ -117,23 +105,36 @@ class EmulatorWindow(QMainWindow):
 
     # Get list of ROMs in directory
     def get_roms(self) -> None:
-        # Clear existing items in scroll layout before reloading
-        while self.scroll_layout.count():
-            item = self.scroll_layout.takeAt(0)
-            if item:
-                widget = item.widget()
-                if widget is not None:
-                    widget.deleteLater()
+        # Remove previous widgets
+        if self.roms_widget is not None:
+            self.roms_widget.deleteLater()
+            self.roms_widget = None
 
         rom_path = self.settings.value("romDir", "")
         if rom_path:
             rom_dir = Path(rom_path)
             if rom_dir.is_dir():
+                # Scroll area
+                scroll_area = QScrollArea()
+                scroll_area.setWidgetResizable(True)
+                self.layout.addWidget(scroll_area)
+                self.roms_widget = scroll_area
+
+                scroll_content = QWidget()
+                scroll_layout = QGridLayout(scroll_content)
+                scroll_area.setWidget(scroll_content)
+
                 for file in rom_dir.rglob("*.ch8"):
                     rom_widget = GameLabel(file)
-                    self.scroll_layout.addWidget(rom_widget)
+                    scroll_layout.addWidget(rom_widget)
             else:
                 self.settings.remove("romDir")
+                self.get_roms()
+        else:
+            choose_dir_button = QPushButton("Choose a rom directory")
+            choose_dir_button.clicked.connect(self.choose_dir)
+            self.layout.addWidget(choose_dir_button)
+            self.roms_widget = choose_dir_button
 
 
 def gui() -> None:
