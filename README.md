@@ -21,7 +21,7 @@ I have included a variety of CHIP-8 ROMs in the `roms` directory taken from the 
 
 ### Ready Build
 
-You can extract the `.zip` file included in the `Releases` section and run the `exe` file to start the app (only available on Windows).
+You can extract the `.zip` or `.tar.gz` file included in the `Releases` section and run the `exe` file to start the app.
 
 ### Run from the Terminal
 
