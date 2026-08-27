@@ -14,7 +14,12 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QPushButton,
     QTreeWidget,
-    QTreeWidgetItem, QHeaderView, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QFrame,
+    QTreeWidgetItem,
+    QHeaderView,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QStyle,
+    QFrame,
 )
 
 from main import main
@@ -24,6 +29,7 @@ def resource_path(relative_path):
     base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
+
 # Disable focus to remove outline from tree widget
 class NoFocusDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -31,6 +37,7 @@ class NoFocusDelegate(QStyledItemDelegate):
         if option.state & QStyle.StateFlag.State_HasFocus:
             option.state &= ~QStyle.StateFlag.State_HasFocus
         super().paint(painter, option, index)
+
 
 # Individual item in the ROM list
 class GameItem(QTreeWidgetItem):
@@ -47,6 +54,7 @@ class GameItem(QTreeWidgetItem):
         self.file = file
 
     def run_game(self):
+        self.setSelected(False)
         main(str(self.file))
 
 
@@ -208,6 +216,8 @@ class EmulatorWindow(QMainWindow):
                 for file in rom_dir.rglob("*.ch8"):
                     # Add each game to the game list
                     GameItem(file, game_list)
+
+                game_list.sortItems(0, Qt.SortOrder.AscendingOrder)
             else:
                 self.settings.remove("romDir")
                 self.get_roms()
