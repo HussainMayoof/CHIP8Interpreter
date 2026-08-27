@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from PyQt6 import QtGui
 from PyQt6.QtCore import QSettings, QSize, Qt
@@ -18,10 +19,11 @@ from PyQt6.QtWidgets import (
 )
 
 from main import main
+from settings import DEFAULT_SETTINGS
 
 
-def resource_path(relative_path):
-    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+def resource_path(relative_path: str):
+    base_path = cast(str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(base_path, relative_path)
 
 # Disable focus to remove outline from tree widget
@@ -45,9 +47,10 @@ class GameItem(QTreeWidgetItem):
         )
 
         self.file = file
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
 
     def run_game(self):
-        main(str(self.file))
+        main(str(self.file), self.settings.value("gameSettings"))
 
 
 # ROM list
@@ -62,9 +65,12 @@ class GameList(QTreeWidget):
         self.setSortingEnabled(True)
 
         self.setColumnWidth(0, 300)
-        self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        self.header().setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+
+        header = self.header()
+        assert header is not None
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
 
         self.setStyleSheet("""
             QTreeWidget::item {
@@ -96,18 +102,19 @@ class GameList(QTreeWidget):
         if isinstance(item, GameItem):
             item.run_game()
 
-    def mousePressEvent(self, event: QtGui.QMouseEvent | None):
+    def mousePressEvent(self, e: QtGui.QMouseEvent | None):
         # If click was a left click and the item was already selected, start the game
-        if event and event.button() == Qt.MouseButton.LeftButton:
-            item = self.itemAt(event.pos())
+        if e and e.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(e.pos())
+            assert isinstance(item, GameItem)
 
             was_selected = item is not None and item.isSelected()
-            super().mousePressEvent(event)
+            super().mousePressEvent(e)
 
             if item is not None and was_selected:
                 item.run_game()
         else:
-            super().mousePressEvent(event)
+            super().mousePressEvent(e)
 
 
 class EmulatorWindow(QMainWindow):
@@ -123,6 +130,10 @@ class EmulatorWindow(QMainWindow):
         )  # Default window size is 640 x 320
         self.resize(size)
 
+        # Set default settings
+        if not self.settings.contains("gameSettings"):
+            self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+
         # GUI layout
         self.layout = QGridLayout()
         self.layout.setContentsMargins(16, 4, 16, 12)
@@ -130,8 +141,15 @@ class EmulatorWindow(QMainWindow):
         self.roms_widget = None
 
         # Menu bar
-        self.menuBar().setStyleSheet("QMenuBar { padding-left: 12}")
-        file_menu = self.menuBar().addMenu("&File")
+        menu_bar = self.menuBar()
+        assert menu_bar is not None
+
+        menu_bar.setStyleSheet("QMenuBar { padding-left: 12}")
+
+
+        # File menu
+        file_menu = menu_bar.addMenu("&File")
+        assert file_menu is not None
 
         choose_game = QAction("Choose &game...", self)
         choose_game.triggered.connect(self.choose_game)
@@ -141,6 +159,11 @@ class EmulatorWindow(QMainWindow):
         choose_rom_dir.triggered.connect(self.choose_dir)
         file_menu.addAction(choose_rom_dir)
 
+        # Settings action
+        open_settings_button = QAction("&Settings", self)
+        open_settings_button.triggered.connect(self.open_settings)
+        menu_bar.addAction(open_settings_button)
+
         # Container widget
         container = QWidget()
         container.setLayout(self.layout)
@@ -148,7 +171,9 @@ class EmulatorWindow(QMainWindow):
 
         self.get_roms()
 
-        QApplication.instance().installEventFilter(self)
+        application_instance = QApplication.instance()
+        assert application_instance is not None
+        application_instance.installEventFilter(self)
 
     # Save window size when GUI is closed
     def closeEvent(self, a0: QtGui.QCloseEvent | None) -> None:
@@ -174,7 +199,7 @@ class EmulatorWindow(QMainWindow):
             self.settings.setValue(
                 "fileSelectDir", Path(file).parent
             )  # Save directory to be used next time
-            main(file)
+            main(file, self.settings.value("gameSettings"))
 
     # Choose a ROM directory
     def choose_dir(self) -> None:
@@ -218,15 +243,19 @@ class EmulatorWindow(QMainWindow):
             self.layout.addWidget(choose_dir_button)
             self.roms_widget = choose_dir_button
 
-    def eventFilter(self, obj, event):
-        if event.type() == QtGui.QMouseEvent.Type.MouseButtonPress and isinstance(
+    def open_settings(self) -> None:
+        print("Settings opened")
+
+    def eventFilter(self, a0, a1):
+        if a1 is not None and a1.type() == QtGui.QMouseEvent.Type.MouseButtonPress and isinstance(
             self.roms_widget, GameList
         ):
-            global_pos = event.globalPosition().toPoint()
+            mouse_event = cast(QtGui.QMouseEvent, a1)
+            global_pos = mouse_event.globalPosition().toPoint()
             local_pos = self.roms_widget.mapFromGlobal(global_pos)
             if not self.roms_widget.rect().contains(local_pos):
                 self.roms_widget.clearSelection()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
 
 def gui() -> None:
