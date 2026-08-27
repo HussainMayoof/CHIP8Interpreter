@@ -9,22 +9,33 @@ from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
-    QWidget,
-    QMainWindow,
+    QComboBox,
     QFileDialog,
+    QFrame,
     QGridLayout,
+    QHeaderView,
+    QLabel,
+    QMainWindow,
     QPushButton,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTabWidget,
     QTreeWidget,
-    QTreeWidgetItem, QHeaderView, QStyledItemDelegate, QStyleOptionViewItem, QStyle, QFrame,
+    QTreeWidgetItem,
+    QWidget,
 )
 
 from main import main
-from settings import DEFAULT_SETTINGS
+from settings import COLOURS, DEFAULT_SETTINGS
 
 
 def resource_path(relative_path: str):
-    base_path = cast(str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))))
+    base_path = cast(
+        str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    )
     return os.path.join(base_path, relative_path)
+
 
 # Disable focus to remove outline from tree widget
 class NoFocusDelegate(QStyledItemDelegate):
@@ -33,6 +44,7 @@ class NoFocusDelegate(QStyledItemDelegate):
         if option.state & QStyle.StateFlag.State_HasFocus:
             option.state &= ~QStyle.StateFlag.State_HasFocus
         super().paint(painter, option, index)
+
 
 # Individual item in the ROM list
 class GameItem(QTreeWidgetItem):
@@ -117,6 +129,87 @@ class GameList(QTreeWidget):
             super().mousePressEvent(e)
 
 
+# General settings
+class GeneralSettings(QWidget):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
+
+        # Layout
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        layout.setColumnStretch(0, 4)
+        layout.setColumnStretch(1, 1)
+
+        layout.setRowStretch(0, 4)
+        layout.setRowStretch(1, 1)
+
+        # Settings box
+        settings_widget = QFrame()
+
+        settings_widget.setFrameShape(QFrame.Shape.Box)
+        settings_widget.setLineWidth(2)
+
+        settings_layout = QGridLayout()
+        settings_widget.setLayout(settings_layout)
+
+        # Colours setting
+        settings_layout.addWidget(QLabel("Colours"), 0, 0)
+
+        self.colours_combo_box = QComboBox()
+        self.colours_combo_box.addItems(colour["Name"] for colour in COLOURS)
+        self.colours_combo_box.activated.connect(self.change_colour)
+
+        settings_layout.addWidget(self.colours_combo_box, 0, 1)
+        layout.addWidget(settings_widget, 0, 0, 1, 2)
+
+        self.refresh_settings()
+
+        # Reset to defaults button
+        reset_button = QPushButton("Reset to Default Settings")
+        reset_button.clicked.connect(self.reset_settings)
+        layout.addWidget(reset_button, 1, 1)
+
+    def change_colour(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["Colours"] = COLOURS[index]
+        self.settings.setValue("gameSettings", current_settings)
+
+    def refresh_settings(self):
+        self.colours_combo_box.setCurrentIndex(
+            COLOURS.index(self.settings.value("gameSettings")["Colours"])
+        )
+
+    def reset_settings(self):
+        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        self.refresh_settings()
+
+
+# Advanced settings
+class AdvancedSettings(QWidget):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+
+# Settings window
+class SettingsWindow(QMainWindow):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+        # Window title and size
+        self.setWindowTitle("Settings")
+        self.resize(QSize(640, 320))
+
+        tabs = QTabWidget()
+        tabs.addTab(GeneralSettings(self), "General")
+        tabs.addTab(AdvancedSettings(self), "Advanced")
+
+        self.setCentralWidget(tabs)
+
+
+# Main window
 class EmulatorWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -145,7 +238,6 @@ class EmulatorWindow(QMainWindow):
         assert menu_bar is not None
 
         menu_bar.setStyleSheet("QMenuBar { padding-left: 12}")
-
 
         # File menu
         file_menu = menu_bar.addMenu("&File")
@@ -244,11 +336,14 @@ class EmulatorWindow(QMainWindow):
             self.roms_widget = choose_dir_button
 
     def open_settings(self) -> None:
-        print("Settings opened")
+        settings_window = SettingsWindow(self)
+        settings_window.show()
 
     def eventFilter(self, a0, a1):
-        if a1 is not None and a1.type() == QtGui.QMouseEvent.Type.MouseButtonPress and isinstance(
-            self.roms_widget, GameList
+        if (
+            a1 is not None
+            and a1.type() == QtGui.QMouseEvent.Type.MouseButtonPress
+            and isinstance(self.roms_widget, GameList)
         ):
             mouse_event = cast(QtGui.QMouseEvent, a1)
             global_pos = mouse_event.globalPosition().toPoint()
