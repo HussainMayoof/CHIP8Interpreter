@@ -8,7 +8,10 @@ import pygame
 from emulator import Emulator
 
 WIDTH, HEIGHT, SCALE = 64, 32, 20
+
 CPU_HZ, TIMER_HZ = 700, 60
+CPU_INTERVAL = 1000 / CPU_HZ
+TIMER_INTERVAL = 1000 / TIMER_HZ
 
 ON_COLOR = (255, 255, 255)
 OFF_COLOR = (0, 0, 0)
@@ -47,20 +50,30 @@ def main(file_name: str) -> None:
         screen.blit(surface, (0, 0))
         pygame.display.flip()
 
-    last_timer_tick = 0
-    timer_interval = 1000 / TIMER_HZ
+    cpu_acc = 0.0
+    timer_acc = 0.0
     running = True
 
     while running:
-        emulator.execute()
-        draw(emulator.display.screen)
+        elapsed = clock.tick()
 
-        elapsed = clock.tick(CPU_HZ)
-        last_timer_tick += elapsed
-        if last_timer_tick >= timer_interval:
+        cpu_acc += elapsed
+        timer_acc += elapsed
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        while timer_acc >= TIMER_INTERVAL:
             emulator.dt.decrement()
             emulator.st.decrement()
-            last_timer_tick -= timer_interval
+            emulator.display_ready = True
+            draw(emulator.display.screen)
+            timer_acc -= TIMER_INTERVAL
+
+        while cpu_acc >= CPU_INTERVAL:
+            emulator.execute()
+            cpu_acc -= CPU_INTERVAL
 
         if emulator.st.is_playing():
             if not pygame.mixer.get_busy():
@@ -68,10 +81,7 @@ def main(file_name: str) -> None:
         else:
             beep.stop()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                pygame.quit()
+pygame.quit()
 
 
 if __name__ == "__main__":
