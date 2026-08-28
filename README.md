@@ -58,8 +58,5 @@ I would like to thank the authors of the following materials for their invaluabl
 
 ## To Do
 
-- [ ] Add settings to GUI
-- [ ] Add debugging
 - [ ] Add SUPER-CHIP support
 - [ ] Add XO-CHIP support
-- [ ] 3DS port? (This will probably never happen)

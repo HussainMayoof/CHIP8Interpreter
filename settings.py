@@ -1,5 +1,13 @@
 DEFAULT_SETTINGS = {
-    "Colours": {"Name": "Monochrome (Default)", "On": (255, 255, 255), "Off": (0, 0, 0)}
+    "Colours": {
+        "Name": "Monochrome (Default)",
+        "On": (255, 255, 255),
+        "Off": (0, 0, 0),
+    },
+    "ShiftUsesVY": True,
+    "JumpUsesBNNN": True,
+    "OverflowFX1E": True,
+    "IncrementI": False,
 }
 
 COLOURS = [

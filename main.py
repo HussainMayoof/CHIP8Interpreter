@@ -23,7 +23,7 @@ def main(file_name: str, settings) -> None:
     on_colour = np.array(on_colour)
     off_colour = np.array(off_colour)
 
-    emulator = Emulator()
+    emulator = Emulator(settings)
 
     emulator.load_rom(file_name)
 

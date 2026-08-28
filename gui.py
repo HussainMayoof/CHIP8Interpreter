@@ -155,6 +155,8 @@ class GeneralSettings(QWidget):
         settings_layout = QGridLayout()
         settings_widget.setLayout(settings_layout)
 
+        layout.addWidget(settings_widget, 0, 0, 1, 2)
+
         # Colours setting
         settings_layout.addWidget(QLabel("Colours"), 0, 0)
 
@@ -163,7 +165,6 @@ class GeneralSettings(QWidget):
         self.colours_combo_box.activated.connect(self.change_colour)
 
         settings_layout.addWidget(self.colours_combo_box, 0, 1)
-        layout.addWidget(settings_widget, 0, 0, 1, 2)
 
         self.refresh_settings()
 
@@ -192,6 +193,126 @@ class AdvancedSettings(QWidget):
     def __init__(self, parent) -> None:
         super().__init__(parent)
 
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
+
+        # Layout
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        layout.setColumnStretch(0, 4)
+        layout.setColumnStretch(1, 1)
+
+        layout.setRowStretch(0, 1)
+        layout.setRowStretch(1, 4)
+        layout.setRowStretch(2, 1)
+
+        # Warning label
+        warning_label = QLabel(
+            "Only change these settings if you know what you are doing!"
+        )
+        warning_label.setStyleSheet("QLabel { color: red; }")
+        layout.addWidget(warning_label, 0, 0)
+
+        # Advanced settings box
+        advanced_settings_widget = QFrame()
+
+        advanced_settings_widget.setFrameShape(QFrame.Shape.Box)
+        advanced_settings_widget.setLineWidth(2)
+
+        advanced_settings_layout = QGridLayout()
+        advanced_settings_widget.setLayout(advanced_settings_layout)
+
+        layout.addWidget(advanced_settings_widget, 1, 0, 1, 2)
+
+        # Shift setting
+        advanced_settings_layout.addWidget(
+            QLabel("Shift instruction behaviour (8XY6 and 8XYE)"), 0, 0
+        )
+
+        self.shift_combo_box = QComboBox()
+        self.shift_combo_box.addItems(["Put VY into VX (Default)", "Ignore VY"])
+        self.shift_combo_box.activated.connect(self.change_shift_setting)
+
+        advanced_settings_layout.addWidget(self.shift_combo_box, 0, 1)
+
+        # Jump setting
+        advanced_settings_layout.addWidget(QLabel("Jump behaviour (BNNN)"), 1, 0)
+
+        self.jump_combo_box = QComboBox()
+        self.jump_combo_box.addItems(["Jump with BNNN (Default)", "Jump with BXNN"])
+        self.jump_combo_box.activated.connect(self.change_jump_setting)
+
+        advanced_settings_layout.addWidget(self.jump_combo_box, 1, 1)
+
+        # Jump setting
+        advanced_settings_layout.addWidget(
+            QLabel("Add to index behaviour (FX1E)"), 2, 0
+        )
+
+        self.add_to_index_combo_box = QComboBox()
+        self.add_to_index_combo_box.addItems(
+            ["Change VF on overflow (Default)", "Don't affect VF on overflow"]
+        )
+        self.add_to_index_combo_box.activated.connect(self.change_add_to_index_setting)
+
+        advanced_settings_layout.addWidget(self.add_to_index_combo_box, 2, 1)
+
+        # Memory setting
+        advanced_settings_layout.addWidget(
+            QLabel("Memory instructions settings (FX55 and FX65)"), 3, 0
+        )
+
+        self.memory_combo_box = QComboBox()
+        self.memory_combo_box.addItems(["Don't increment I (Default)", "Increment I"])
+        self.memory_combo_box.activated.connect(self.change_memory_setting)
+
+        advanced_settings_layout.addWidget(self.memory_combo_box, 3, 1)
+
+        self.refresh_settings()
+
+        # Reset to defaults button
+        reset_button = QPushButton("Reset to Default Settings")
+        reset_button.clicked.connect(self.reset_settings)
+        layout.addWidget(reset_button, 2, 1)
+
+    def change_shift_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["ShiftUsesVY"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_jump_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["JumpUsesBNNN"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_add_to_index_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["OverflowFX1E"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_memory_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["IncrementI"] = bool(index)
+        self.settings.setValue("gameSettings", current_settings)
+
+    def refresh_settings(self):
+        self.shift_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["ShiftUsesVY"] else 1
+        )
+        self.jump_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["JumpUsesBNNN"] else 1
+        )
+        self.add_to_index_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["OverflowFX1E"] else 1
+        )
+        self.memory_combo_box.setCurrentIndex(
+            1 if self.settings.value("gameSettings")["IncrementI"] else 0
+        )
+
+    def reset_settings(self):
+        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        self.refresh_settings()
+
 
 # Settings window
 class SettingsWindow(QMainWindow):
@@ -202,11 +323,16 @@ class SettingsWindow(QMainWindow):
         self.setWindowTitle("Settings")
         self.resize(QSize(640, 320))
 
-        tabs = QTabWidget()
-        tabs.addTab(GeneralSettings(self), "General")
-        tabs.addTab(AdvancedSettings(self), "Advanced")
+        self.tabs = QTabWidget()
+        self.tabs.addTab(GeneralSettings(self), "General")
+        self.tabs.addTab(AdvancedSettings(self), "Advanced")
+        self.tabs.currentChanged.connect(self.refresh_tab)
 
-        self.setCentralWidget(tabs)
+        self.setCentralWidget(self.tabs)
+
+    def refresh_tab(self, index):
+        refresh_settings = self.tabs.currentWidget().reset_settings
+        refresh_settings()
 
 
 # Main window
