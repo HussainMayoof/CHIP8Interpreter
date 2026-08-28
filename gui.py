@@ -2,31 +2,38 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from PyQt6 import QtGui
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
-    QWidget,
-    QMainWindow,
+    QComboBox,
     QFileDialog,
+    QFrame,
     QGridLayout,
-    QPushButton,
-    QTreeWidget,
-    QTreeWidgetItem,
     QHeaderView,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QStyle,
-    QFrame,
+    QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QWidget,
 )
 
 from main import main
+from settings import COLOURS, DEFAULT_SETTINGS
 
 
-def resource_path(relative_path):
-    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+def resource_path(relative_path: str):
+    base_path = cast(
+        str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    )
     return os.path.join(base_path, relative_path)
 
 
@@ -52,11 +59,11 @@ class GameItem(QTreeWidgetItem):
         )
 
         self.file = file
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
 
     def run_game(self):
+        main(str(self.file), self.settings.value("gameSettings"))
         self.setSelected(False)
-        main(str(self.file))
-
 
 # ROM list
 class GameList(QTreeWidget):
@@ -70,9 +77,12 @@ class GameList(QTreeWidget):
         self.setSortingEnabled(True)
 
         self.setColumnWidth(0, 300)
-        self.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        self.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        self.header().setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+
+        header = self.header()
+        assert header is not None
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
 
         self.setStyleSheet("""
             QTreeWidget::item {
@@ -104,20 +114,228 @@ class GameList(QTreeWidget):
         if isinstance(item, GameItem):
             item.run_game()
 
-    def mousePressEvent(self, event: QtGui.QMouseEvent | None):
+    def mousePressEvent(self, e: QtGui.QMouseEvent | None):
         # If click was a left click and the item was already selected, start the game
-        if event and event.button() == Qt.MouseButton.LeftButton:
-            item = self.itemAt(event.pos())
+        if e and e.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(e.pos())
+            assert isinstance(item, GameItem)
 
             was_selected = item is not None and item.isSelected()
-            super().mousePressEvent(event)
+            super().mousePressEvent(e)
 
             if item is not None and was_selected:
                 item.run_game()
         else:
-            super().mousePressEvent(event)
+            super().mousePressEvent(e)
 
 
+# General settings
+class GeneralSettings(QWidget):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
+
+        # Layout
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        layout.setColumnStretch(0, 4)
+        layout.setColumnStretch(1, 1)
+
+        layout.setRowStretch(0, 4)
+        layout.setRowStretch(1, 1)
+
+        # Settings box
+        settings_widget = QFrame()
+
+        settings_widget.setFrameShape(QFrame.Shape.Box)
+        settings_widget.setLineWidth(2)
+
+        settings_layout = QGridLayout()
+        settings_widget.setLayout(settings_layout)
+
+        layout.addWidget(settings_widget, 0, 0, 1, 2)
+
+        # Colours setting
+        settings_layout.addWidget(QLabel("Colours"), 0, 0)
+
+        self.colours_combo_box = QComboBox()
+        self.colours_combo_box.addItems(colour["Name"] for colour in COLOURS)
+        self.colours_combo_box.activated.connect(self.change_colour)
+
+        settings_layout.addWidget(self.colours_combo_box, 0, 1)
+
+        self.refresh_settings()
+
+        # Reset to defaults button
+        reset_button = QPushButton("Reset to Default Settings")
+        reset_button.clicked.connect(self.reset_settings)
+        layout.addWidget(reset_button, 1, 1)
+
+    def change_colour(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["Colours"] = COLOURS[index]
+        self.settings.setValue("gameSettings", current_settings)
+
+    def refresh_settings(self):
+        self.colours_combo_box.setCurrentIndex(
+            COLOURS.index(self.settings.value("gameSettings")["Colours"])
+        )
+
+    def reset_settings(self):
+        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        self.refresh_settings()
+
+
+# Advanced settings
+class AdvancedSettings(QWidget):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+        self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
+
+        # Layout
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        layout.setColumnStretch(0, 4)
+        layout.setColumnStretch(1, 1)
+
+        layout.setRowStretch(0, 1)
+        layout.setRowStretch(1, 4)
+        layout.setRowStretch(2, 1)
+
+        # Warning label
+        warning_label = QLabel(
+            "Only change these settings if you know what you are doing!"
+        )
+        warning_label.setStyleSheet("QLabel { color: red; }")
+        layout.addWidget(warning_label, 0, 0)
+
+        # Advanced settings box
+        advanced_settings_widget = QFrame()
+
+        advanced_settings_widget.setFrameShape(QFrame.Shape.Box)
+        advanced_settings_widget.setLineWidth(2)
+
+        advanced_settings_layout = QGridLayout()
+        advanced_settings_widget.setLayout(advanced_settings_layout)
+
+        layout.addWidget(advanced_settings_widget, 1, 0, 1, 2)
+
+        # Shift setting
+        advanced_settings_layout.addWidget(
+            QLabel("Shift instruction behaviour (8XY6 and 8XYE)"), 0, 0
+        )
+
+        self.shift_combo_box = QComboBox()
+        self.shift_combo_box.addItems(["Put VY into VX (Default)", "Ignore VY"])
+        self.shift_combo_box.activated.connect(self.change_shift_setting)
+
+        advanced_settings_layout.addWidget(self.shift_combo_box, 0, 1)
+
+        # Jump setting
+        advanced_settings_layout.addWidget(QLabel("Jump behaviour (BNNN)"), 1, 0)
+
+        self.jump_combo_box = QComboBox()
+        self.jump_combo_box.addItems(["Jump with BNNN (Default)", "Jump with BXNN"])
+        self.jump_combo_box.activated.connect(self.change_jump_setting)
+
+        advanced_settings_layout.addWidget(self.jump_combo_box, 1, 1)
+
+        # Jump setting
+        advanced_settings_layout.addWidget(
+            QLabel("Add to index behaviour (FX1E)"), 2, 0
+        )
+
+        self.add_to_index_combo_box = QComboBox()
+        self.add_to_index_combo_box.addItems(
+            ["Change VF on overflow (Default)", "Don't affect VF on overflow"]
+        )
+        self.add_to_index_combo_box.activated.connect(self.change_add_to_index_setting)
+
+        advanced_settings_layout.addWidget(self.add_to_index_combo_box, 2, 1)
+
+        # Memory setting
+        advanced_settings_layout.addWidget(
+            QLabel("Memory instructions settings (FX55 and FX65)"), 3, 0
+        )
+
+        self.memory_combo_box = QComboBox()
+        self.memory_combo_box.addItems(["Don't increment I (Default)", "Increment I"])
+        self.memory_combo_box.activated.connect(self.change_memory_setting)
+
+        advanced_settings_layout.addWidget(self.memory_combo_box, 3, 1)
+
+        self.refresh_settings()
+
+        # Reset to defaults button
+        reset_button = QPushButton("Reset to Default Settings")
+        reset_button.clicked.connect(self.reset_settings)
+        layout.addWidget(reset_button, 2, 1)
+
+    def change_shift_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["ShiftUsesVY"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_jump_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["JumpUsesBNNN"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_add_to_index_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["OverflowFX1E"] = not index
+        self.settings.setValue("gameSettings", current_settings)
+
+    def change_memory_setting(self, index):
+        current_settings = self.settings.value("gameSettings")
+        current_settings["IncrementI"] = bool(index)
+        self.settings.setValue("gameSettings", current_settings)
+
+    def refresh_settings(self):
+        self.shift_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["ShiftUsesVY"] else 1
+        )
+        self.jump_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["JumpUsesBNNN"] else 1
+        )
+        self.add_to_index_combo_box.setCurrentIndex(
+            0 if self.settings.value("gameSettings")["OverflowFX1E"] else 1
+        )
+        self.memory_combo_box.setCurrentIndex(
+            1 if self.settings.value("gameSettings")["IncrementI"] else 0
+        )
+
+    def reset_settings(self):
+        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        self.refresh_settings()
+
+
+# Settings window
+class SettingsWindow(QMainWindow):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+        # Window title and size
+        self.setWindowTitle("Settings")
+        self.resize(QSize(640, 320))
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(GeneralSettings(self), "General")
+        self.tabs.addTab(AdvancedSettings(self), "Advanced")
+        self.tabs.currentChanged.connect(self.refresh_tab)
+
+        self.setCentralWidget(self.tabs)
+
+    def refresh_tab(self, index):
+        refresh_settings = self.tabs.currentWidget().reset_settings
+        refresh_settings()
+
+
+# Main window
 class EmulatorWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -131,6 +349,10 @@ class EmulatorWindow(QMainWindow):
         )  # Default window size is 640 x 320
         self.resize(size)
 
+        # Set default settings
+        if not self.settings.contains("gameSettings"):
+            self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+
         # GUI layout
         self.layout = QGridLayout()
         self.layout.setContentsMargins(16, 4, 16, 12)
@@ -138,8 +360,14 @@ class EmulatorWindow(QMainWindow):
         self.roms_widget = None
 
         # Menu bar
-        self.menuBar().setStyleSheet("QMenuBar { padding-left: 12}")
-        file_menu = self.menuBar().addMenu("&File")
+        menu_bar = self.menuBar()
+        assert menu_bar is not None
+
+        menu_bar.setStyleSheet("QMenuBar { padding-left: 12}")
+
+        # File menu
+        file_menu = menu_bar.addMenu("&File")
+        assert file_menu is not None
 
         choose_game = QAction("Choose &game...", self)
         choose_game.triggered.connect(self.choose_game)
@@ -149,6 +377,11 @@ class EmulatorWindow(QMainWindow):
         choose_rom_dir.triggered.connect(self.choose_dir)
         file_menu.addAction(choose_rom_dir)
 
+        # Settings action
+        open_settings_button = QAction("&Settings", self)
+        open_settings_button.triggered.connect(self.open_settings)
+        menu_bar.addAction(open_settings_button)
+
         # Container widget
         container = QWidget()
         container.setLayout(self.layout)
@@ -156,7 +389,9 @@ class EmulatorWindow(QMainWindow):
 
         self.get_roms()
 
-        QApplication.instance().installEventFilter(self)
+        application_instance = QApplication.instance()
+        assert application_instance is not None
+        application_instance.installEventFilter(self)
 
     # Save window size when GUI is closed
     def closeEvent(self, a0: QtGui.QCloseEvent | None) -> None:
@@ -182,7 +417,7 @@ class EmulatorWindow(QMainWindow):
             self.settings.setValue(
                 "fileSelectDir", Path(file).parent
             )  # Save directory to be used next time
-            main(file)
+            main(file, self.settings.value("gameSettings"))
 
     # Choose a ROM directory
     def choose_dir(self) -> None:
@@ -228,15 +463,22 @@ class EmulatorWindow(QMainWindow):
             self.layout.addWidget(choose_dir_button)
             self.roms_widget = choose_dir_button
 
-    def eventFilter(self, obj, event):
-        if event.type() == QtGui.QMouseEvent.Type.MouseButtonPress and isinstance(
-            self.roms_widget, GameList
+    def open_settings(self) -> None:
+        settings_window = SettingsWindow(self)
+        settings_window.show()
+
+    def eventFilter(self, a0, a1):
+        if (
+            a1 is not None
+            and a1.type() == QtGui.QMouseEvent.Type.MouseButtonPress
+            and isinstance(self.roms_widget, GameList)
         ):
-            global_pos = event.globalPosition().toPoint()
+            mouse_event = cast(QtGui.QMouseEvent, a1)
+            global_pos = mouse_event.globalPosition().toPoint()
             local_pos = self.roms_widget.mapFromGlobal(global_pos)
             if not self.roms_widget.rect().contains(local_pos):
                 self.roms_widget.clearSelection()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
 
 def gui() -> None:

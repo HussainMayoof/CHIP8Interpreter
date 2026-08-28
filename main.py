@@ -6,6 +6,7 @@ import numpy as np
 import pygame
 
 from emulator import Emulator
+from settings import DEFAULT_SETTINGS
 
 WIDTH, HEIGHT, SCALE = 64, 32, 20
 
@@ -13,14 +14,19 @@ CPU_HZ, TIMER_HZ = 700, 60
 CPU_INTERVAL = 1000 / CPU_HZ
 TIMER_INTERVAL = 1000 / TIMER_HZ
 
-ON_COLOR = (255, 255, 255)
-OFF_COLOR = (0, 0, 0)
-
 BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
 
 
-def main(file_name: str) -> None:
-    emulator = Emulator()
+def main(file_name: str, settings) -> None:
+    # Get colours from settings
+    on_colour = settings["Colours"]["On"]
+    off_colour = settings["Colours"]["Off"]
+    assert on_colour is not None and isinstance(on_colour, tuple)
+    assert off_colour is not None and isinstance(off_colour, tuple)
+    on_colour = np.array(on_colour)
+    off_colour = np.array(off_colour)
+
+    emulator = Emulator(settings)
 
     emulator.load_rom(file_name)
 
@@ -44,7 +50,7 @@ def main(file_name: str) -> None:
     beep = pygame.sndarray.make_sound(wave)
 
     def draw(display: np.ndarray) -> None:
-        rgb = np.where(display[..., None], ON_COLOR, OFF_COLOR)
+        rgb = np.where(display[..., None], on_colour, off_colour)
         surface = pygame.surfarray.make_surface(rgb)
         surface = pygame.transform.scale(surface, (WIDTH * SCALE, HEIGHT * SCALE))
         screen.blit(surface, (0, 0))
@@ -89,4 +95,4 @@ if __name__ == "__main__":
         file = sys.argv[1]
     else:
         file = tkinter.filedialog.askopenfilename()
-    main(file)
+    main(file, DEFAULT_SETTINGS)

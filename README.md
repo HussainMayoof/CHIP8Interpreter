@@ -7,7 +7,7 @@ A simple CHIP-8 interpreter/emulator written in Python, intended to be an emulat
 ## Features
 
 - Fully designed font created by me
-- All original instructions supported
+- All original instructions are supported
 - Currently only supports original CHIP-8 games
 - Partial functionality
 
@@ -59,8 +59,5 @@ I would like to thank the authors of the following materials for their invaluabl
 
 ## To Do
 
-- [ ] Add settings to GUI
-- [ ] Add debugging
 - [ ] Add SUPER-CHIP support
 - [ ] Add XO-CHIP support
-- [ ] 3DS port? (This will probably never happen)
