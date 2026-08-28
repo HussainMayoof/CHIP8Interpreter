@@ -55,6 +55,7 @@ class Emulator:
     def __init__(self, settings) -> None:
         self.memory = Memory()
         self.display = Display()
+        self.display_ready = False
         self.keyboard = Keyboard()
         self.pc = Register(16)
         self.ir = Register(16)
@@ -157,16 +158,19 @@ class Emulator:
                         self.set_register(
                             x, self.get_register(x) | self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x2:  # and (8XY2)
                         self.set_register(
                             x, self.get_register(x) & self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x3:  # xor (8XY3)
                         self.set_register(
                             x, self.get_register(x) ^ self.get_register(y)
                         )
+                        self.set_register(0xF, 0)
 
                     case 0x4:  # add (8XY4)
                         value = self.get_register(x) + self.get_register(y)
@@ -181,7 +185,7 @@ class Emulator:
                         y_val = self.get_register(y)
                         value = x_val - y_val
                         self.set_register(x, value)
-                        if x_val > y_val:
+                        if x_val >= y_val:
                             self.set_register(0xF, 1)
                         else:
                             self.set_register(0xF, 0)
@@ -191,7 +195,7 @@ class Emulator:
                         y_val = self.get_register(y)
                         value = y_val - x_val
                         self.set_register(x, value)
-                        if x_val < y_val:
+                        if x_val <= y_val:
                             self.set_register(0xF, 1)
                         else:
                             self.set_register(0xF, 0)
@@ -229,6 +233,11 @@ class Emulator:
                 self.set_register(x, rand & nn)
 
             case 0xD:  # display (DXYN)
+                if not self.display_ready:
+                    self.pc.set_value(self.pc.get_value() - 0x2)
+                    return
+
+                self.display_ready = False
                 x_start = self.get_register(x) % self.display.WIDTH
                 y_val = self.get_register(y) % self.display.HEIGHT
                 self.set_register(0xF, 0)
