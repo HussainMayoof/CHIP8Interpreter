@@ -56,6 +56,10 @@ I would like to thank the authors of the following materials for their invaluabl
 - [CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) by Timendus and other contributors
 - [CHIP-8 Database](https://github.com/chip-8/chip-8-database) by Timendus and other contributors
 
+## Third-Party Libraries
+
+- [CHIP-8 Database](https://github.com/chip-8/chip-8-database) at `./database`
+
 ---
 
 ## To Do
