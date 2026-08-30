@@ -1,6 +1,3 @@
-import os
-import sys
-from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -26,15 +23,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from main import main
+from main import SUPPORTED_PLATFORMS, get_game_data, get_rom_data, main, resource_path
 from settings import COLOURS, DEFAULT_SETTINGS
-
-
-def resource_path(relative_path: str):
-    base_path = cast(
-        str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    )
-    return os.path.join(base_path, relative_path)
 
 
 # Disable focus to remove outline from tree widget
@@ -49,14 +39,34 @@ class NoFocusDelegate(QStyledItemDelegate):
 # Individual item in the ROM list
 class GameItem(QTreeWidgetItem):
     def __init__(self, file: Path, parent: QTreeWidget) -> None:
-        super().__init__(
-            parent,
-            [
-                file.stem,
-                f"{(file.stat().st_size / 1024):.1f} KB",
-                datetime.fromtimestamp(file.stat().st_mtime).strftime("%d/%m/%Y"),
-            ],
-        )
+        game_data = get_game_data(str(file))
+        rom_data = get_rom_data(str(file))
+
+        if game_data is None or rom_data is None:
+            super().__init__(
+                parent,
+                [
+                    file.stem,
+                    "Unknown",
+                    "Unknown",
+                    "Unknown",
+                ],
+            )
+        else:
+            platform = "Unsupported"
+            for item in rom_data["platforms"]:
+                if item in SUPPORTED_PLATFORMS:
+                    platform = item
+                    break
+            super().__init__(
+                parent,
+                [
+                    game_data["title"],
+                    game_data["authors"][0],
+                    platform,
+                    game_data["release"],
+                ],
+            )
 
         self.file = file
         self.settings = QSettings("config.ini", QSettings.Format.IniFormat)
@@ -72,7 +82,7 @@ class GameList(QTreeWidget):
         super().__init__()
 
         self.setColumnCount(3)
-        self.setHeaderLabels(["Game Name", "File Size", "Modified"])
+        self.setHeaderLabels(["Name", "Author", "Platform", "Release Date"])
         self.setRootIsDecorated(False)
         self.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
         self.setSortingEnabled(True)
@@ -84,6 +94,7 @@ class GameList(QTreeWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
 
         self.setStyleSheet("""
             QTreeWidget::item {

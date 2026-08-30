@@ -1,8 +1,5 @@
-# -*- mode: python ; coding: utf-8 -*-
-
-import sys
 import os
-
+import sys
 
 SPEC_DIR = os.path.abspath(SPECPATH)
 
@@ -14,10 +11,10 @@ else:
     icon_file = None
 
 a = Analysis(
-    ['gui.py'],
+    ["gui.py"],
     pathex=[],
     binaries=[],
-    datas=[('assets/c8.png', 'assets')],
+    datas=[("assets/c8.png", "assets"), ("database/*", "database")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -33,7 +30,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='HelloCHIP',
+    name="HelloCHIP",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -44,7 +41,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=icon_file
+    icon=icon_file,
 )
 coll = COLLECT(
     exe,
@@ -53,5 +50,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='HelloCHIP',
+    name="HelloCHIP",
 )

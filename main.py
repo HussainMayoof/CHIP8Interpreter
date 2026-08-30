@@ -1,8 +1,10 @@
 import hashlib
 import json
+import os
 import sys
 import tkinter.filedialog
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pygame
@@ -21,21 +23,51 @@ BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
 SUPPORTED_PLATFORMS = ["originalChip8", "hybridVIP", "modernChip8"]
 
 
-def get_game_settings(file_name: str, settings):
+def resource_path(relative_path: str):
+    base_path = cast(
+        str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    )
+    return os.path.join(base_path, relative_path)
+
+
+def get_game_data(file_name: str):
     with open(file_name, "rb") as f:
         digest = hashlib.file_digest(f, "sha1").hexdigest()
 
-    with open("./database/sha1-hashes.json") as f:
+    with open(resource_path("./database/sha1-hashes.json")) as f:
         hashes = json.load(f)
 
     if not digest in hashes:
-        return settings
+        return None
 
-    with open("./database/programs.json", encoding="utf-8") as f:
+    with open(resource_path("./database/programs.json"), encoding="utf-8") as f:
         programs = json.load(f)
 
-    program_data = programs[int(hashes[digest])]
-    rom_data = program_data["roms"][digest]
+    return programs[int(hashes[digest])]
+
+
+def get_rom_data(file_name: str):
+    with open(file_name, "rb") as f:
+        digest = hashlib.file_digest(f, "sha1").hexdigest()
+
+    with open(resource_path("./database/sha1-hashes.json")) as f:
+        hashes = json.load(f)
+
+    if not digest in hashes:
+        return None
+
+    with open(resource_path("./database/programs.json"), encoding="utf-8") as f:
+        programs = json.load(f)
+
+    return programs[int(hashes[digest])]["roms"][digest]
+
+
+def get_game_settings(file_name: str, settings):
+    program_data = get_game_data(file_name)
+    rom_data = get_rom_data(file_name)
+
+    if program_data is None or rom_data is None:
+        return settings
 
     platform = ""
 
@@ -47,7 +79,7 @@ def get_game_settings(file_name: str, settings):
     if platform == "":
         return settings
 
-    with open("./database/platforms.json", encoding="utf-8") as f:
+    with open(resource_path("./database/platforms.json"), encoding="utf-8") as f:
         platforms = json.load(f)
 
     settings["Quirks"] = next(
@@ -80,7 +112,12 @@ def main(file_name: str, settings) -> None:
     pygame.init()
 
     screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
-    pygame.display.set_caption(Path(file_name).stem)
+
+    game_data = get_game_data(file_name)
+    if get_game_data(file_name):
+        pygame.display.set_caption(game_data["title"])
+    else:
+        pygame.display.set_caption(Path(file_name).stem)
     clock = pygame.time.Clock()
 
     mixer_info = pygame.mixer.get_init()
