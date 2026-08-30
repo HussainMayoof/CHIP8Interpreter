@@ -1,6 +1,10 @@
+import hashlib
+import json
+import os
 import sys
 import tkinter.filedialog
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pygame
@@ -16,6 +20,78 @@ TIMER_INTERVAL = 1000 / TIMER_HZ
 
 BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
 
+SUPPORTED_PLATFORMS = ["originalChip8", "hybridVIP", "modernChip8"]
+
+
+def resource_path(relative_path: str):
+    base_path = cast(
+        str, getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    )
+    return os.path.join(base_path, relative_path)
+
+
+def get_game_data(file_name: str):
+    with open(file_name, "rb") as f:
+        digest = hashlib.file_digest(f, "sha1").hexdigest()
+
+    with open(resource_path("./database/sha1-hashes.json")) as f:
+        hashes = json.load(f)
+
+    if not digest in hashes:
+        return None
+
+    with open(resource_path("./database/programs.json"), encoding="utf-8") as f:
+        programs = json.load(f)
+
+    return programs[int(hashes[digest])]
+
+
+def get_rom_data(file_name: str):
+    with open(file_name, "rb") as f:
+        digest = hashlib.file_digest(f, "sha1").hexdigest()
+
+    with open(resource_path("./database/sha1-hashes.json")) as f:
+        hashes = json.load(f)
+
+    if not digest in hashes:
+        return None
+
+    with open(resource_path("./database/programs.json"), encoding="utf-8") as f:
+        programs = json.load(f)
+
+    return programs[int(hashes[digest])]["roms"][digest]
+
+
+def get_game_settings(file_name: str, settings):
+    program_data = get_game_data(file_name)
+    rom_data = get_rom_data(file_name)
+
+    if program_data is None or rom_data is None:
+        return settings
+
+    platform = ""
+
+    for item in rom_data["platforms"]:
+        if item in SUPPORTED_PLATFORMS:
+            platform = item
+            break
+
+    if platform == "":
+        return settings
+
+    with open(resource_path("./database/platforms.json"), encoding="utf-8") as f:
+        platforms = json.load(f)
+
+    settings["Quirks"] = next(
+        (item for item in platforms if item["id"] == platform), None
+    )["quirks"]
+
+    if "quirkyPlatforms" in rom_data and platform in rom_data["quirkyPlatforms"]:
+        for quirk, value in rom_data["quirkyPlatforms"][platform]:
+            settings["Quirks"][quirk] = value
+
+    return settings
+
 
 def main(file_name: str, settings) -> None:
     # Get colours from settings
@@ -26,6 +102,8 @@ def main(file_name: str, settings) -> None:
     on_colour = np.array(on_colour)
     off_colour = np.array(off_colour)
 
+    settings = get_game_settings(file_name, settings)
+
     emulator = Emulator(settings)
 
     emulator.load_rom(file_name)
@@ -34,7 +112,12 @@ def main(file_name: str, settings) -> None:
     pygame.init()
 
     screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
-    pygame.display.set_caption(Path(file_name).stem)
+
+    game_data = get_game_data(file_name)
+    if get_game_data(file_name):
+        pygame.display.set_caption(game_data["title"])
+    else:
+        pygame.display.set_caption(Path(file_name).stem)
     clock = pygame.time.Clock()
 
     mixer_info = pygame.mixer.get_init()
@@ -87,7 +170,7 @@ def main(file_name: str, settings) -> None:
         else:
             beep.stop()
 
-pygame.quit()
+    pygame.quit()
 
 
 if __name__ == "__main__":
