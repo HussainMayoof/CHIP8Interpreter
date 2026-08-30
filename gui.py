@@ -210,7 +210,7 @@ class AdvancedSettings(QWidget):
 
         # Warning label
         warning_label = QLabel(
-            "Only change these settings if you know what you are doing!"
+            "Only change these settings if you know what you are doing! (These settings will only apply to games not found in the database)"
         )
         warning_label.setStyleSheet("QLabel { color: red; }")
         layout.addWidget(warning_label, 0, 0)

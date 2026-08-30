@@ -1,3 +1,5 @@
+import hashlib
+import json
 import sys
 import tkinter.filedialog
 from pathlib import Path
@@ -16,6 +18,48 @@ TIMER_INTERVAL = 1000 / TIMER_HZ
 
 BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
 
+SUPPORTED_PLATFORMS = ["originalChip8", "hybridVIP", "modernChip8"]
+
+
+def get_game_settings(file_name: str, settings):
+    with open(file_name, "rb") as f:
+        digest = hashlib.file_digest(f, "sha1").hexdigest()
+
+    with open("./database/sha1-hashes.json") as f:
+        hashes = json.load(f)
+
+    if not digest in hashes:
+        return settings
+
+    with open("./database/programs.json", encoding="utf-8") as f:
+        programs = json.load(f)
+
+    program_data = programs[int(hashes[digest])]
+    rom_data = program_data["roms"][digest]
+
+    platform = ""
+
+    for item in rom_data["platforms"]:
+        if item in SUPPORTED_PLATFORMS:
+            platform = item
+            break
+
+    if platform == "":
+        return settings
+
+    with open("./database/platforms.json", encoding="utf-8") as f:
+        platforms = json.load(f)
+
+    settings["Quirks"] = next(
+        (item for item in platforms if item["id"] == platform), None
+    )["quirks"]
+
+    if "quirkyPlatforms" in rom_data and platform in rom_data["quirkyPlatforms"]:
+        for quirk, value in rom_data["quirkyPlatforms"][platform]:
+            settings["Quirks"][quirk] = value
+
+    return settings
+
 
 def main(file_name: str, settings) -> None:
     # Get colours from settings
@@ -25,6 +69,8 @@ def main(file_name: str, settings) -> None:
     assert off_colour is not None and isinstance(off_colour, tuple)
     on_colour = np.array(on_colour)
     off_colour = np.array(off_colour)
+
+    settings = get_game_settings(file_name, settings)
 
     emulator = Emulator(settings)
 
@@ -87,7 +133,7 @@ def main(file_name: str, settings) -> None:
         else:
             beep.stop()
 
-pygame.quit()
+    pygame.quit()
 
 
 if __name__ == "__main__":
