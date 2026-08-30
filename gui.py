@@ -65,6 +65,7 @@ class GameItem(QTreeWidgetItem):
         main(str(self.file), self.settings.value("gameSettings"))
         self.setSelected(False)
 
+
 # ROM list
 class GameList(QTreeWidget):
     def __init__(self) -> None:
@@ -118,13 +119,12 @@ class GameList(QTreeWidget):
         # If click was a left click and the item was already selected, start the game
         if e and e.button() == Qt.MouseButton.LeftButton:
             item = self.itemAt(e.pos())
-            assert isinstance(item, GameItem)
+            if isinstance(item, GameItem):
+                was_selected = item is not None and item.isSelected()
+                super().mousePressEvent(e)
 
-            was_selected = item is not None and item.isSelected()
-            super().mousePressEvent(e)
-
-            if item is not None and was_selected:
-                item.run_game()
+                if item is not None and was_selected:
+                    item.run_game()
         else:
             super().mousePressEvent(e)
 
@@ -184,7 +184,9 @@ class GeneralSettings(QWidget):
         )
 
     def reset_settings(self):
-        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        current_settings = self.settings.value("gameSettings")
+        current_settings["Colours"] = DEFAULT_SETTINGS["Colours"]
+        self.settings.setValue("gameSettings", current_settings)
         self.refresh_settings()
 
 
@@ -225,48 +227,107 @@ class AdvancedSettings(QWidget):
         layout.addWidget(advanced_settings_widget, 1, 0, 1, 2)
 
         # Shift setting
-        advanced_settings_layout.addWidget(
-            QLabel("Shift instruction behaviour (8XY6 and 8XYE)"), 0, 0
-        )
+        advanced_settings_layout.addWidget(QLabel("Shift quirk (8XY6 and 8XYE)"), 0, 0)
 
         self.shift_combo_box = QComboBox()
-        self.shift_combo_box.addItems(["Put VY into VX (Default)", "Ignore VY"])
-        self.shift_combo_box.activated.connect(self.change_shift_setting)
+        self.shift_combo_box.addItems(
+            ["Take VX as input", "Take VY as input (Default)"]
+        )
+        self.shift_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "shift")
+        )
 
         advanced_settings_layout.addWidget(self.shift_combo_box, 0, 1)
 
+        # Memory increment by X setting
+        advanced_settings_layout.addWidget(
+            QLabel("Load/Store quirk: increment index register by X (FX55 and FX65)"),
+            1,
+            0,
+        )
+
+        self.memory_increment_by_x_combo_box = QComboBox()
+        self.memory_increment_by_x_combo_box.addItems(
+            ["Increment by X", "Increment by X + 1 (Default)"]
+        )
+        self.shift_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "memoryIncrementByX")
+        )
+
+        advanced_settings_layout.addWidget(self.memory_increment_by_x_combo_box, 1, 1)
+
+        # Memory leave I unchanged setting
+        advanced_settings_layout.addWidget(
+            QLabel("Load/Store quirk: leave index register unchanged (FX55 and FX65)"),
+            2,
+            0,
+        )
+
+        self.memory_leave_i_unchanged_combo_box = QComboBox()
+        self.memory_leave_i_unchanged_combo_box.addItems(
+            ["Leave I unchanged", "Increment I (Default)"]
+        )
+        self.memory_leave_i_unchanged_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "memoryLeaveIUnchanged")
+        )
+
+        advanced_settings_layout.addWidget(
+            self.memory_leave_i_unchanged_combo_box, 2, 1
+        )
+
+        # Wrap setting
+        advanced_settings_layout.addWidget(
+            QLabel("Wrap quirk (DXYN)"),
+            3,
+            0,
+        )
+
+        self.wrap_combo_box = QComboBox()
+        self.wrap_combo_box.addItems(["Wrap sprites", "Clip sprites (Default)"])
+        self.wrap_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "wrap")
+        )
+
+        advanced_settings_layout.addWidget(self.wrap_combo_box, 3, 1)
+
         # Jump setting
-        advanced_settings_layout.addWidget(QLabel("Jump behaviour (BNNN)"), 1, 0)
+        advanced_settings_layout.addWidget(QLabel("Jump quirk (BNNN)"), 4, 0)
 
         self.jump_combo_box = QComboBox()
-        self.jump_combo_box.addItems(["Jump with BNNN (Default)", "Jump with BXNN"])
-        self.jump_combo_box.activated.connect(self.change_jump_setting)
+        self.jump_combo_box.addItems(["Jump with BXNN", "Jump with BNNN (Default)"])
+        self.jump_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "jump")
+        )
 
-        advanced_settings_layout.addWidget(self.jump_combo_box, 1, 1)
+        advanced_settings_layout.addWidget(self.jump_combo_box, 4, 1)
 
-        # Jump setting
+        # vBlank setting
+        advanced_settings_layout.addWidget(QLabel("vBlank quirk (DXYN)"), 5, 0)
+
+        self.vblank_combo_box = QComboBox()
+        self.vblank_combo_box.addItems(
+            ["Wait for vertical blank", "Draw sprites immediately (Default)"]
+        )
+        self.vblank_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "vblank")
+        )
+
+        advanced_settings_layout.addWidget(self.vblank_combo_box, 5, 1)
+
+        # Logic setting
         advanced_settings_layout.addWidget(
-            QLabel("Add to index behaviour (FX1E)"), 2, 0
+            QLabel("VF reset quirk (8XY1, 8XY2, and 8XY3)"), 6, 0
         )
 
-        self.add_to_index_combo_box = QComboBox()
-        self.add_to_index_combo_box.addItems(
-            ["Change VF on overflow (Default)", "Don't affect VF on overflow"]
+        self.logic_combo_box = QComboBox()
+        self.logic_combo_box.addItems(
+            ["Set VF to 0 after execution", "Leave VF unchanged (Default)"]
         )
-        self.add_to_index_combo_box.activated.connect(self.change_add_to_index_setting)
-
-        advanced_settings_layout.addWidget(self.add_to_index_combo_box, 2, 1)
-
-        # Memory setting
-        advanced_settings_layout.addWidget(
-            QLabel("Memory instructions settings (FX55 and FX65)"), 3, 0
+        self.logic_combo_box.activated.connect(
+            lambda index: self.change_setting(index, "logic")
         )
 
-        self.memory_combo_box = QComboBox()
-        self.memory_combo_box.addItems(["Don't increment I (Default)", "Increment I"])
-        self.memory_combo_box.activated.connect(self.change_memory_setting)
-
-        advanced_settings_layout.addWidget(self.memory_combo_box, 3, 1)
+        advanced_settings_layout.addWidget(self.logic_combo_box, 6, 1)
 
         self.refresh_settings()
 
@@ -275,42 +336,29 @@ class AdvancedSettings(QWidget):
         reset_button.clicked.connect(self.reset_settings)
         layout.addWidget(reset_button, 2, 1)
 
-    def change_shift_setting(self, index):
+    def change_setting(self, index, name):
         current_settings = self.settings.value("gameSettings")
-        current_settings["ShiftUsesVY"] = not index
-        self.settings.setValue("gameSettings", current_settings)
-
-    def change_jump_setting(self, index):
-        current_settings = self.settings.value("gameSettings")
-        current_settings["JumpUsesBNNN"] = not index
-        self.settings.setValue("gameSettings", current_settings)
-
-    def change_add_to_index_setting(self, index):
-        current_settings = self.settings.value("gameSettings")
-        current_settings["OverflowFX1E"] = not index
-        self.settings.setValue("gameSettings", current_settings)
-
-    def change_memory_setting(self, index):
-        current_settings = self.settings.value("gameSettings")
-        current_settings["IncrementI"] = bool(index)
+        current_settings["Quirks"][name] = bool(index != 1)
         self.settings.setValue("gameSettings", current_settings)
 
     def refresh_settings(self):
-        self.shift_combo_box.setCurrentIndex(
-            0 if self.settings.value("gameSettings")["ShiftUsesVY"] else 1
+        quirks = self.settings.value("gameSettings")["Quirks"]
+        self.shift_combo_box.setCurrentIndex(0 if quirks["shift"] else 1)
+        self.memory_increment_by_x_combo_box.setCurrentIndex(
+            0 if quirks["memoryIncrementByX"] else 1
         )
-        self.jump_combo_box.setCurrentIndex(
-            0 if self.settings.value("gameSettings")["JumpUsesBNNN"] else 1
+        self.memory_leave_i_unchanged_combo_box.setCurrentIndex(
+            0 if quirks["memoryLeaveIUnchanged"] else 1
         )
-        self.add_to_index_combo_box.setCurrentIndex(
-            0 if self.settings.value("gameSettings")["OverflowFX1E"] else 1
-        )
-        self.memory_combo_box.setCurrentIndex(
-            1 if self.settings.value("gameSettings")["IncrementI"] else 0
-        )
+        self.wrap_combo_box.setCurrentIndex(0 if quirks["wrap"] else 1)
+        self.jump_combo_box.setCurrentIndex(0 if quirks["jump"] else 1)
+        self.vblank_combo_box.setCurrentIndex(0 if quirks["vblank"] else 1)
+        self.logic_combo_box.setCurrentIndex(0 if quirks["logic"] else 1)
 
     def reset_settings(self):
-        self.settings.setValue("gameSettings", DEFAULT_SETTINGS)
+        current_settings = self.settings.value("gameSettings")
+        current_settings["Quirks"] = DEFAULT_SETTINGS["Quirks"]
+        self.settings.setValue("gameSettings", current_settings)
         self.refresh_settings()
 
 
@@ -331,7 +379,7 @@ class SettingsWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
     def refresh_tab(self, index):
-        refresh_settings = self.tabs.currentWidget().reset_settings
+        refresh_settings = self.tabs.currentWidget().refresh_settings
         refresh_settings()
 
 

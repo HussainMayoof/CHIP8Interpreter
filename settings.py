@@ -4,10 +4,15 @@ DEFAULT_SETTINGS = {
         "On": (255, 255, 255),
         "Off": (0, 0, 0),
     },
-    "ShiftUsesVY": True,
-    "JumpUsesBNNN": True,
-    "OverflowFX1E": True,
-    "IncrementI": False,
+    "Quirks": {
+        "shift": False,
+        "memoryIncrementByX": False,
+        "memoryLeaveIUnchanged": False,
+        "wrap": False,
+        "jump": False,
+        "vblank": False,
+        "logic": False,
+    },
 }
 
 COLOURS = [

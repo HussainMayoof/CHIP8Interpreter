@@ -54,7 +54,7 @@ I would like to thank the authors of the following materials for their invaluabl
 - [Guide to making a CHIP-8 emulator](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#keypad) by Tobias Langhoff
 - [PyQt6 Tutorial](https://www.pythonguis.com/pyqt6-tutorial/) by Martin Fitzpatrick
 - [CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) by Timendus and other contributors
-- [CHIP-8 Database](https://github.com/chip-8/chip-8-database) by Timendus and other contributors
+- [CHIP-8 Database](https://github.com/chip-8/chip-8-database) by the CHIP-8 Research Facility
 
 ## Third-Party Libraries
 

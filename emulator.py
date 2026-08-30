@@ -65,7 +65,7 @@ class Emulator:
 
         self.registers: list[Register] = [Register(8) for _ in range(16)]
 
-        self.settings = settings
+        self.quirks = settings["Quirks"]
 
     def get_register(self, address: int) -> int:
         return self.registers[address].get_value()
@@ -158,19 +158,22 @@ class Emulator:
                         self.set_register(
                             x, self.get_register(x) | self.get_register(y)
                         )
-                        self.set_register(0xF, 0)
+                        if self.quirks["logic"]:
+                            self.set_register(0xF, 0)
 
                     case 0x2:  # and (8XY2)
                         self.set_register(
                             x, self.get_register(x) & self.get_register(y)
                         )
-                        self.set_register(0xF, 0)
+                        if self.quirks["logic"]:
+                            self.set_register(0xF, 0)
 
                     case 0x3:  # xor (8XY3)
                         self.set_register(
                             x, self.get_register(x) ^ self.get_register(y)
                         )
-                        self.set_register(0xF, 0)
+                        if self.quirks["logic"]:
+                            self.set_register(0xF, 0)
 
                     case 0x4:  # add (8XY4)
                         value = self.get_register(x) + self.get_register(y)
@@ -201,18 +204,18 @@ class Emulator:
                             self.set_register(0xF, 0)
 
                     case 0x6:  # shift right (8XY6)
-                        if self.settings["ShiftUsesVY"]:
-                            value = self.get_register(y)
-                        else:
+                        if self.quirks["shift"]:
                             value = self.get_register(x)
+                        else:
+                            value = self.get_register(y)
                         self.set_register(x, value >> 1)
                         self.set_register(0xF, value & 1)
 
                     case 0xE:  # shift right (8XYE)
-                        if self.settings["ShiftUsesVY"]:
-                            value = self.get_register(y)
-                        else:
+                        if self.quirks["shift"]:
                             value = self.get_register(x)
+                        else:
+                            value = self.get_register(y)
                         self.set_register(x, value << 1)
                         overflow = 0
                         if value & 0x80:
@@ -223,17 +226,17 @@ class Emulator:
                 self.ir.set_value(nnn)
 
             case 0xB:  # jump with offset (BNNN)
-                if self.settings["JumpUsesBNNN"]:
-                    self.pc.set_value(nnn + self.get_register(0x0))
-                else:
+                if self.quirks["jump"]:
                     self.pc.set_value(nnn + self.get_register(x))
+                else:
+                    self.pc.set_value(nnn + self.get_register(0x0))
 
             case 0xC:  # random (CXNN)
                 rand = randint(0, 0xFF)
                 self.set_register(x, rand & nn)
 
             case 0xD:  # display (DXYN)
-                if not self.display_ready:
+                if not self.display_ready and self.quirks["vblank"]:
                     self.pc.set_value(self.pc.get_value() - 0x2)
                     return
 
@@ -244,14 +247,20 @@ class Emulator:
 
                 for i in range(n):
                     if y_val >= self.display.HEIGHT:
-                        break
+                        if self.quirks["wrap"]:
+                            y_val = 0
+                        else:
+                            break
 
                     sprite_byte = self.memory.read(self.ir.get_value() + i)
                     x_val = x_start
 
                     for j in range(7, -1, -1):
                         if x_val >= self.display.WIDTH:
-                            break
+                            if self.quirks["wrap"]:
+                                x_val = 0
+                            else:
+                                break
 
                         bit = sprite_byte >> j & 1
                         if bit and self.display.get_pixel(x_val, y_val):
@@ -284,11 +293,10 @@ class Emulator:
 
                 if nibble3 == 0x1 and nibble4 == 0xE:  # add to index (FX1E)
                     value = self.ir.get_value() + self.get_register(x)
-                    if self.settings["OverflowFX1E"]:
-                        if value > 0x0FFF:
-                            self.set_register(0xF, 1)
-                        else:
-                            self.set_register(0xF, 0)
+                    if value > 0x0FFF:
+                        self.set_register(0xF, 1)
+                    else:
+                        self.set_register(0xF, 0)
                     self.ir.set_value(value)
 
                 if nibble3 == 0x0 and nibble4 == 0xA:  # get key (FX0A)
@@ -313,25 +321,31 @@ class Emulator:
                     self.memory.write(self.ir.get_value() + 2, right)
 
                 if nibble3 == 0x5 and nibble4 == 0x5:  # store registers (FX55)
-                    if self.settings["IncrementI"]:
-                        for i in range(x + 1):
-                            ir = self.ir.get_value()
-                            self.memory.write(ir, self.get_register(i))
-                            self.ir.set_value(ir + 1)
-                    else:
+                    if self.quirks["memoryLeaveIUnchanged"]:
                         for i in range(x + 1):
                             self.memory.write(
                                 self.ir.get_value() + i, self.get_register(i)
                             )
-
-                if nibble3 == 0x6 and nibble4 == 0x5:  # get registers (FX65)
-                    if self.settings["IncrementI"]:
+                    else:
                         for i in range(x + 1):
                             ir = self.ir.get_value()
-                            self.set_register(i, self.memory.read(ir))
+                            self.memory.write(ir, self.get_register(i))
                             self.ir.set_value(ir + 1)
-                    else:
+
+                        if self.quirks["memoryIncrementByX"]:
+                            self.ir.set_value(self.ir.get_value() - 1)
+
+                if nibble3 == 0x6 and nibble4 == 0x5:  # get registers (FX65)
+                    if self.quirks["memoryLeaveIUnchanged"]:
                         for i in range(x + 1):
                             self.set_register(
                                 i, self.memory.read(self.ir.get_value() + i)
                             )
+                    else:
+                        for i in range(x + 1):
+                            ir = self.ir.get_value()
+                            self.set_register(i, self.memory.read(ir))
+                            self.ir.set_value(ir + 1)
+
+                        if self.quirks["memoryIncrementByX"]:
+                            self.ir.set_value(self.ir.get_value() - 1)
