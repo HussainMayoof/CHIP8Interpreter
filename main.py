@@ -12,10 +12,7 @@ import pygame
 from emulator import Emulator
 from settings import DEFAULT_SETTINGS
 
-WIDTH, HEIGHT, SCALE = 64, 32, 20
-
-CPU_HZ, TIMER_HZ = 700, 60
-CPU_INTERVAL = 1000 / CPU_HZ
+TIMER_HZ = 60
 TIMER_INTERVAL = 1000 / TIMER_HZ
 
 BEEP_FREQUENCY, BEEP_AMPLITUDE = 440, 8000
@@ -82,13 +79,28 @@ def get_game_settings(file_name: str, settings):
     with open(resource_path("./database/platforms.json"), encoding="utf-8") as f:
         platforms = json.load(f)
 
-    settings["Quirks"] = next(
+    platform_data = next(
         (item for item in platforms if item["id"] == platform), None
-    )["quirks"]
+    )
+
+    settings["Quirks"] = platform_data["quirks"]
 
     if "quirkyPlatforms" in rom_data and platform in rom_data["quirkyPlatforms"]:
         for quirk, value in rom_data["quirkyPlatforms"][platform]:
             settings["Quirks"][quirk] = value
+
+    if "tickrate" in rom_data:
+        settings["TickRate"] = rom_data["tickrate"]
+    else:
+        settings["TickRate"] = platform_data["defaultTickrate"]
+
+    match platform_data["displayResolutions"][-1]:
+        case "64x32":
+            settings["Width"], settings["Height"], settings["Scale"] = 64, 32, 20
+        case "128x64":
+            settings["Width"], settings["Height"], settings["Scale"] = 128, 64, 10
+        case "256x192":
+            settings["Width"], settings["Height"], settings["Scale"] = 256, 192, 5
 
     return settings
 
@@ -104,6 +116,11 @@ def main(file_name: str, settings) -> None:
 
     settings = get_game_settings(file_name, settings)
 
+    cpu_hz = settings["TickRate"] * TIMER_HZ
+    cpu_interval = 1000 / cpu_hz
+
+    width, height, scale = settings["Width"], settings["Height"], settings["Scale"]
+
     emulator = Emulator(settings)
 
     emulator.load_rom(file_name)
@@ -111,7 +128,7 @@ def main(file_name: str, settings) -> None:
     pygame.mixer.pre_init(channels=1, allowedchanges=0)
     pygame.init()
 
-    screen = pygame.display.set_mode(((WIDTH * SCALE), (HEIGHT * SCALE)))
+    screen = pygame.display.set_mode(((width * scale), (height * scale)))
 
     game_data = get_game_data(file_name)
     if get_game_data(file_name):
@@ -135,7 +152,7 @@ def main(file_name: str, settings) -> None:
     def draw(display: np.ndarray) -> None:
         rgb = np.where(display[..., None], on_colour, off_colour)
         surface = pygame.surfarray.make_surface(rgb)
-        surface = pygame.transform.scale(surface, (WIDTH * SCALE, HEIGHT * SCALE))
+        surface = pygame.transform.scale(surface, (width * scale, height * scale))
         screen.blit(surface, (0, 0))
         pygame.display.flip()
 
@@ -160,9 +177,9 @@ def main(file_name: str, settings) -> None:
             draw(emulator.display.screen)
             timer_acc -= TIMER_INTERVAL
 
-        while cpu_acc >= CPU_INTERVAL:
+        while cpu_acc >= cpu_interval:
             emulator.execute()
-            cpu_acc -= CPU_INTERVAL
+            cpu_acc -= cpu_interval
 
         if emulator.st.is_playing():
             if not pygame.mixer.get_busy():

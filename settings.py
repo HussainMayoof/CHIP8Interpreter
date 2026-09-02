@@ -13,75 +13,11 @@ DEFAULT_SETTINGS = {
         "vblank": False,
         "logic": False,
     },
+    "TickRate": 15,
+    "Width": 64,
+    "Height": 32,
+    "Scale": 20
 }
-#
-# ORIGINAL_CHIP_8_SETTINGS = {
-#     "Colours": {
-#         "Name": "Monochrome (Default)",
-#         "On": (255, 255, 255),
-#         "Off": (0, 0, 0),
-#     },
-#     "Quirks": {
-#         "shift": False,
-#         "memoryIncrementByX": False,
-#         "memoryLeaveIUnchanged": False,
-#         "wrap": False,
-#         "jump": False,
-#         "vblank": True,
-#         "logic": True,
-#     },
-# }
-#
-# HYBRID_VIP_SETTINGS = {
-#     "Colours": {
-#         "Name": "Monochrome (Default)",
-#         "On": (255, 255, 255),
-#         "Off": (0, 0, 0),
-#     },
-#     "Quirks": {
-#         "shift": False,
-#         "memoryIncrementByX": False,
-#         "memoryLeaveIUnchanged": False,
-#         "wrap": False,
-#         "jump": False,
-#         "vblank": True,
-#         "logic": True,
-#     },
-# }
-#
-# MODERN_CHIP_8_SETTINGS = {
-#     "Colours": {
-#         "Name": "Monochrome (Default)",
-#         "On": (255, 255, 255),
-#         "Off": (0, 0, 0),
-#     },
-#     "Quirks": {
-#         "shift": False,
-#         "memoryIncrementByX": False,
-#         "memoryLeaveIUnchanged": False,
-#         "wrap": False,
-#         "jump": False,
-#         "vblank": False,
-#         "logic": False,
-#     },
-# }
-#
-# CHIP_8_X_SETTINGS = {
-#     "Colours": {
-#         "Name": "Monochrome (Default)",
-#         "On": (255, 255, 255),
-#         "Off": (0, 0, 0),
-#     },
-#     "Quirks": {
-#         "shift": False,
-#         "memoryIncrementByX": False,
-#         "memoryLeaveIUnchanged": False,
-#         "wrap": False,
-#         "jump": False,
-#         "vblank": True,
-#         "logic": True,
-#     },
-# }
 
 COLOURS = [
     {"Name": "Monochrome (Default)", "On": (255, 255, 255), "Off": (0, 0, 0)},

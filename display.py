@@ -2,11 +2,10 @@ import numpy as np
 
 
 class Display:
-    WIDTH = 64
-    HEIGHT = 32
-
-    def __init__(self) -> None:
-        self.screen = np.zeros((self.WIDTH, self.HEIGHT))
+    def __init__(self, width, height) -> None:
+        self.width = width
+        self.height = height
+        self.screen = np.zeros((self.width, self.height))
 
     def get_pixel(self, x: int, y: int) -> int:
         return self.screen[x][y]
@@ -18,4 +17,4 @@ class Display:
         self.screen = new_screen
 
     def clear(self) -> None:
-        self.screen = np.zeros((self.WIDTH, self.HEIGHT))
+        self.screen = np.zeros((self.width, self.height))

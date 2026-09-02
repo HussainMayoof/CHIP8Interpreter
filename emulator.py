@@ -54,7 +54,7 @@ class SoundTimer(DelayTimer):
 class Emulator:
     def __init__(self, settings) -> None:
         self.memory = Memory()
-        self.display = Display()
+        self.display = Display(settings["Width"], settings["Height"])
         self.display_ready = False
         self.keyboard = Keyboard()
         self.pc = Register(16)
@@ -109,12 +109,12 @@ class Emulator:
         match nibble1:
             case 0x0:
                 if (
-                    nibble2 == 0x0 and nibble3 == 0xE and nibble4 == 0x0
+                        nibble2 == 0x0 and nibble3 == 0xE and nibble4 == 0x0
                 ):  # clear screen (00E0)
                     self.display.clear()
 
                 if (
-                    nibble2 == 0x0 and nibble3 == 0xE and nibble4 == 0xE
+                        nibble2 == 0x0 and nibble3 == 0xE and nibble4 == 0xE
                 ):  # return from subroutine (00EE)
                     self.pc.set_value(self.stack.pop())
 
@@ -241,12 +241,12 @@ class Emulator:
                     return
 
                 self.display_ready = False
-                x_start = self.get_register(x) % self.display.WIDTH
-                y_val = self.get_register(y) % self.display.HEIGHT
+                x_start = self.get_register(x) % self.display.width
+                y_val = self.get_register(y) % self.display.height
                 self.set_register(0xF, 0)
 
                 for i in range(n):
-                    if y_val >= self.display.HEIGHT:
+                    if y_val >= self.display.width:
                         if self.quirks["wrap"]:
                             y_val = 0
                         else:
@@ -256,7 +256,7 @@ class Emulator:
                     x_val = x_start
 
                     for j in range(7, -1, -1):
-                        if x_val >= self.display.WIDTH:
+                        if x_val >= self.display.width:
                             if self.quirks["wrap"]:
                                 x_val = 0
                             else:
