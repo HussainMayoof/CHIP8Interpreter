@@ -152,7 +152,7 @@ def main(file_name: str, settings) -> None:
     def draw(display: np.ndarray) -> None:
         rgb = np.where(display[..., None], on_colour, off_colour)
         surface = pygame.surfarray.make_surface(rgb)
-        surface = pygame.transform.scale(surface, (width * scale, height * scale))
+        surface = pygame.transform.scale(surface, (emulator.display.width * scale, emulator.display.height * scale))
         screen.blit(surface, (0, 0))
         pygame.display.flip()
 

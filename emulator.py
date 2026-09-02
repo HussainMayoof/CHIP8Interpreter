@@ -118,6 +118,21 @@ class Emulator:
                 ):  # return from subroutine (00EE)
                     self.pc.set_value(self.stack.pop())
 
+                if (
+                        nibble2 == 0x0 and nibble3 == 0xC
+                ):  # Scroll down (00CN)
+                    self.display.scroll_vertical(n)
+
+                if (
+                        nibble2 == 0x0 and nibble3 == 0x0 and nibble4 == 0xB
+                ):  # Scroll right (00FB)
+                    self.display.scroll_right(4)
+
+                if (
+                        nibble2 == 0x0 and nibble3 == 0x0 and nibble4 == 0xC
+                ):  # Scroll left (00FC)
+                    self.display.scroll_left(4)
+
             case 0x1:  # jump (1NNN)
                 self.pc.set_value(nnn)
 
